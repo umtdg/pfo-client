@@ -1,96 +1,16 @@
-use std::{cmp::Ordering, collections::HashSet};
+use std::collections::HashSet;
 
+use crate::turkish::*;
 use anyhow::{Context, Result};
 
 use crate::{
     cli::args::PortfolioCommand,
     client::{
         Client,
-        models::{PortfolioFundAdd, PortfolioUpdate},
+        models::portfolio::{PortfolioFundAdd, PortfolioUpdate},
     },
     output::{FundToBuyColumn, PortfolioColumn},
 };
-
-fn turkish_char_order(c: char) -> usize {
-    match c {
-        'A' => 0,
-        'a' => 1,
-        'B' => 2,
-        'b' => 3,
-        'C' => 4,
-        'c' => 5,
-        'Ç' => 6,
-        'ç' => 7,
-        'D' => 8,
-        'd' => 9,
-        'E' => 10,
-        'e' => 11,
-        'F' => 12,
-        'f' => 13,
-        'G' => 14,
-        'g' => 15,
-        'Ğ' => 16,
-        'ğ' => 17,
-        'H' => 18,
-        'h' => 19,
-        'I' => 20,
-        'ı' => 21,
-        'İ' => 22,
-        'i' => 23,
-        'J' => 24,
-        'j' => 25,
-        'K' => 26,
-        'k' => 27,
-        'L' => 28,
-        'l' => 29,
-        'M' => 30,
-        'm' => 31,
-        'N' => 32,
-        'n' => 33,
-        'O' => 34,
-        'o' => 35,
-        'Ö' => 36,
-        'ö' => 37,
-        'P' => 38,
-        'p' => 39,
-        'Q' => 40,
-        'q' => 41,
-        'R' => 42,
-        'r' => 43,
-        'S' => 44,
-        's' => 45,
-        'Ş' => 46,
-        'ş' => 47,
-        'T' => 48,
-        't' => 49,
-        'U' => 50,
-        'u' => 51,
-        'Ü' => 52,
-        'ü' => 53,
-        'V' => 54,
-        'v' => 55,
-        'W' => 56,
-        'w' => 57,
-        'X' => 58,
-        'x' => 59,
-        'Y' => 60,
-        'y' => 61,
-        'Z' => 62,
-        'z' => 63,
-        _ => usize::MAX,
-    }
-}
-
-fn turkish_collate(lhs: &str, rhs: &str) -> Ordering {
-    for (lc, rc) in lhs.chars().zip(rhs.chars()) {
-        match turkish_char_order(lc).cmp(&turkish_char_order(rc)) {
-            Ordering::Equal => continue,
-            ord => return ord,
-        }
-    }
-
-    lhs.len().cmp(&rhs.len())
-}
 
 pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
     match cmd {
@@ -118,11 +38,12 @@ pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
         PortfolioCommand::Prices {
             id,
             budget,
+            date,
             output,
             no_headers,
             wide,
         } => {
-            let mut funds = client.get_portfolio_prices(id, budget).await?;
+            let mut funds = client.get_portfolio_prices(id, budget, date).await?;
             funds.sort_by(|lhs, rhs| turkish_collate(&lhs.title, &rhs.title));
 
             let columns = output.unwrap_or(vec![

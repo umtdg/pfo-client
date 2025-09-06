@@ -1,10 +1,9 @@
 use anyhow::{Context, Result};
+use chrono::NaiveDate;
 use uuid::Uuid;
 
-use super::{
-    Client,
-    models::{FundToBuy, Portfolio, PortfolioUpdate},
-};
+use crate::client::Client;
+use crate::client::models::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 
 pub async fn get_portfolio(client: &Client, id: Uuid) -> Result<Portfolio> {
     let url = format!("{}/p/{}", client.base_url, id);
@@ -39,14 +38,20 @@ pub async fn get_portfolio_prices(
     client: &Client,
     id: Uuid,
     budget: f32,
+    date: Option<NaiveDate>,
 ) -> Result<Vec<FundToBuy>> {
     let url = format!("{}/p/{}/prices?budget={}", client.base_url, id, budget);
-    let res = client
+    let mut req = client
         .inner
         .get(url)
-        .send()
-        .await
-        .context("Failed to fetch portfolio fund price distribution")?;
+        .query(&[("budget", budget)]);
+        
+    if let Some(date) = date {
+        req = req.query(&[("date", &format!("{}", date.format("%m.%d.%Y")))]);
+    }
+    
+    let res = req.send().await.context("Failed to fetch fund prices")?;
+
     let funds = res
         .json()
         .await

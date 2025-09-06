@@ -1,7 +1,8 @@
-use clap::{Parser, Subcommand, ArgAction};
+use chrono::NaiveDate;
+use clap::{ArgAction, Parser, Subcommand};
 use uuid::Uuid;
 
-use crate::output::{FundToBuyColumn, PortfolioColumn};
+use crate::output::{FundInformationColumn, FundToBuyColumn, PortfolioColumn};
 
 #[derive(Parser)]
 #[command(name = "portfolio-cli")]
@@ -33,8 +34,12 @@ pub enum Commands {
         #[command(subcommand)]
         command: PortfolioCommand,
     },
-    // Fund(FundCommand),
-    // Login(LoginCommand),
+
+    #[command(name = "fund", visible_alias = "f", about = "Fund actions")]
+    Fund {
+        #[command(subcommand)]
+        command: FundCommand,
+    },
 }
 
 #[derive(Subcommand)]
@@ -66,13 +71,20 @@ pub enum PortfolioCommand {
         wide: bool,
     },
 
-    #[command(name = "prices", visible_alias = "p", about = "Get how much to spend for each fund in a portfolio")]
+    #[command(
+        name = "prices",
+        visible_alias = "p",
+        about = "Get how much to spend for each fund in a portfolio"
+    )]
     Prices {
         #[arg(value_name = "PORTFOLIO_ID")]
         id: Uuid,
 
         #[arg(short, long)]
         budget: f32,
+
+        #[arg(short, long, value_parser = parse_naive_date)]
+        date: Option<NaiveDate>,
 
         #[arg(short, long, value_delimiter = ',')]
         output: Option<Vec<FundToBuyColumn>>,
@@ -99,7 +111,11 @@ pub enum PortfolioCommand {
         min_amount: u32,
     },
 
-    #[command(name = "remove", visible_alias = "rm", about = "Remove funds from a portfolio")]
+    #[command(
+        name = "remove",
+        visible_alias = "rm",
+        about = "Remove funds from a portfolio"
+    )]
     Remove {
         #[arg(value_name = "PORTFOLIO_ID")]
         id: Uuid,
@@ -107,4 +123,32 @@ pub enum PortfolioCommand {
         #[arg(short, long, value_name = "FUND_CODE")]
         codes: Vec<String>,
     },
+}
+
+#[derive(Subcommand)]
+pub enum FundCommand {
+    #[command(name = "get", visible_alias = "g", about = "Get fund(s)")]
+    Get {
+        #[arg(value_name = "FUND_CODES", value_delimiter = ',')]
+        codes: Vec<String>,
+
+        #[arg(short, long, value_parser = parse_naive_date)]
+        date: Option<NaiveDate>,
+
+        #[arg(short, long)]
+        force: bool,
+
+        #[arg(short, long, value_delimiter = ',')]
+        output: Option<Vec<FundInformationColumn>>,
+
+        #[arg(long)]
+        no_headers: bool,
+
+        #[arg(short, long)]
+        wide: bool,
+    },
+}
+
+pub fn parse_naive_date(s: &str) -> Result<NaiveDate, chrono::ParseError> {
+    NaiveDate::parse_from_str(s, "%m.%d.%Y")
 }

@@ -2,14 +2,19 @@ pub mod endpoints;
 pub mod models;
 
 use anyhow::Result;
-use models::{FundToBuy, Portfolio, PortfolioUpdate};
+use chrono::NaiveDate;
+use models::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 use uuid::Uuid;
 
-use crate::config::Config;
+use crate::client::models::fund::FundInformation;
+
+use super::config::Config;
+use endpoints::fund::*;
+use endpoints::portfolio::*;
 
 pub struct Client {
-    inner: reqwest::Client,
-    base_url: String,
+    pub(crate) inner: reqwest::Client,
+    pub(crate) base_url: String,
 }
 
 impl Client {
@@ -21,18 +26,41 @@ impl Client {
     }
 
     pub async fn list_portfolios(&self) -> Result<Vec<Portfolio>> {
-        endpoints::get_portfolios(self).await
+        get_portfolios(self).await
     }
 
     pub async fn get_portfolio(&self, id: Uuid) -> Result<Portfolio> {
-        endpoints::get_portfolio(self, id).await
+        get_portfolio(self, id).await
     }
 
-    pub async fn get_portfolio_prices(&self, id: Uuid, budget: f32) -> Result<Vec<FundToBuy>> {
-        endpoints::get_portfolio_prices(self, id, budget).await
+    pub async fn get_portfolio_prices(
+        &self,
+        id: Uuid,
+        budget: f32,
+        date: Option<NaiveDate>,
+    ) -> Result<Vec<FundToBuy>> {
+        get_portfolio_prices(self, id, budget, date).await
     }
 
     pub async fn update_portfolio(&self, id: Uuid, update: PortfolioUpdate) -> Result<()> {
-        endpoints::update_portfolio(self, id, update).await
+        update_portfolio(self, id, update).await
+    }
+
+    pub async fn get_fund(
+        &self,
+        code: String,
+        date: Option<NaiveDate>,
+        force: bool,
+    ) -> Result<FundInformation> {
+        get_fund(self, code, date, force).await
+    }
+
+    pub async fn get_funds(
+        &self,
+        codes: Vec<String>,
+        date: Option<NaiveDate>,
+        force: bool,
+    ) -> Result<Vec<FundInformation>> {
+        get_funds(self, codes, date, force).await
     }
 }
