@@ -9,12 +9,12 @@ pub async fn handle(cmd: FundCommand, client: Client) -> Result<()> {
         FundCommand::Get {
             codes,
             date,
-            force,
+            from,
             output,
             no_headers,
             wide,
         } => {
-            let fund_infos = client.get_funds(codes, date, force).await?;
+            let fund_infos = client.get_funds(codes, date, from).await?;
             let columns = output.unwrap_or(vec![
                 FundInformationColumn::Code,
                 FundInformationColumn::Title,

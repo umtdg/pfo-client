@@ -50,17 +50,16 @@ impl Client {
         &self,
         code: String,
         date: Option<NaiveDate>,
-        force: bool,
     ) -> Result<FundInformation> {
-        get_fund(self, code, date, force).await
+        get_fund(self, code, date).await
     }
 
     pub async fn get_funds(
         &self,
         codes: Vec<String>,
         date: Option<NaiveDate>,
-        force: bool,
+        from: Option<NaiveDate>,
     ) -> Result<Vec<FundInformation>> {
-        get_funds(self, codes, date, force).await
+        get_funds(self, codes, date, from).await
     }
 }

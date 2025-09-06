@@ -135,8 +135,8 @@ pub enum FundCommand {
         #[arg(short, long, value_parser = parse_naive_date)]
         date: Option<NaiveDate>,
 
-        #[arg(short, long)]
-        force: bool,
+        #[arg(short, long, value_parser = parse_naive_date)]
+        from: Option<NaiveDate>,
 
         #[arg(short, long, value_delimiter = ',')]
         output: Option<Vec<FundInformationColumn>>,
