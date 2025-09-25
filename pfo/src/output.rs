@@ -9,6 +9,7 @@ use crate::client::models::{
 
 pub trait OutputTable: Sized {
     type ColumnEnum: OutputColumn;
+    type OutputStruct: OutputStruct;
 
     const COLUMN_SPACING: usize;
 
@@ -23,110 +24,21 @@ pub trait OutputColumn {
     fn left_align(&self) -> bool;
 }
 
-// FundInformation
-impl OutputTable for FundInformation {
-    type ColumnEnum = FundInformationColumn;
+pub trait OutputStruct {
+    type ColumnEnum: OutputColumn;
+    type ValueStruct: OutputTable;
 
-    const COLUMN_SPACING: usize = 2;
+    fn from_headers() -> Self;
 
-    fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool) {
-        let mut col_widths = HashMap::new();
-        for col in columns {
-            let width = match col {
-                FundInformationColumn::Code => 3,
-                FundInformationColumn::Title => list
-                    .iter()
-                    .map(|f| {
-                        let len = f.title.len();
-                        if wide {
-                            len
-                        } else {
-                            std::cmp::min(len, col.max_len())
-                        }
-                    })
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundInformationColumn::Provider => list
-                    .iter()
-                    .map(|f| {
-                        let len = f.provider.len();
-                        if wide {
-                            len
-                        } else {
-                            std::cmp::min(len, col.max_len())
-                        }
-                    })
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundInformationColumn::Date => 10,
-                FundInformationColumn::Price => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.price).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundInformationColumn::TotalValue => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.total_value).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-            };
-            col_widths.insert(col.clone(), width + Self::COLUMN_SPACING);
-        }
+    fn from_value(value: &Self::ValueStruct, wide: bool) -> Self;
 
-        if headers {
-            for col in columns {
-                let col_display = col.name_str();
-                let col_display_len = col_display.len();
-                let mut col_width = *col_widths.get(col).unwrap();
-                if col_display_len > col_width - Self::COLUMN_SPACING {
-                    col_width = col_display_len;
-                    col_widths.insert(col.clone(), col_width + Self::COLUMN_SPACING);
-                }
+    fn value_from_col(&self, col: &Self::ColumnEnum) -> &str;
 
-                if col.left_align() {
-                    print!(
-                        "{:<width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                } else {
-                    print!(
-                        "{:>width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                }
-            }
-            println!();
-        }
-
-        for f in list {
-            for col in columns {
-                let width = col_widths.get(col).unwrap();
-                let val = match col {
-                    FundInformationColumn::Code => f.code.clone(),
-                    FundInformationColumn::Title => trim_string(&f.title, col.max_len(), wide),
-                    FundInformationColumn::Provider => {
-                        trim_string(&f.provider, col.max_len(), wide)
-                    }
-                    FundInformationColumn::Date => format!("{}", f.date.format("%m.%d.%Y")),
-                    FundInformationColumn::Price => format!("{:.6}", f.price),
-                    FundInformationColumn::TotalValue => format!("{:.6}", f.total_value),
-                };
-
-                if col.left_align() {
-                    print!("{:<width$}", val, width = width);
-                } else {
-                    print!("{:>width$}", val, width = width);
-                }
-            }
-
-            println!();
-        }
-    }
+    fn len_from_col(&self, col: &Self::ColumnEnum) -> usize;
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, clap::ValueEnum)]
+// FundInformation
+#[derive(Clone, Eq, Hash, PartialEq, clap::ValueEnum)]
 pub enum FundInformationColumn {
     Code,
     Title,
@@ -171,139 +83,97 @@ impl OutputColumn for FundInformationColumn {
     }
 }
 
-// FundStats
-impl OutputTable for FundStats {
-    type ColumnEnum = FundStatsColumn;
+pub struct FundInformationOutput {
+    pub code: String,
+    pub title: String,
+    pub provider: String,
+    pub date: String,
+    pub price: String,
+    pub total_value: String,
+}
+
+impl OutputStruct for FundInformationOutput {
+    type ColumnEnum = FundInformationColumn;
+    type ValueStruct = FundInformation;
+
+    fn from_headers() -> Self {
+        Self {
+            code: Self::ColumnEnum::Code.name_str().to_string(),
+            title: Self::ColumnEnum::Title.name_str().to_string(),
+            provider: Self::ColumnEnum::Provider.name_str().to_string(),
+            date: Self::ColumnEnum::Date.name_str().to_string(),
+            price: Self::ColumnEnum::Price.name_str().to_string(),
+            total_value: Self::ColumnEnum::TotalValue.name_str().to_string(),
+        }
+    }
+
+    fn from_value(value: &Self::ValueStruct, wide: bool) -> Self {
+        Self {
+            code: trim_string(&value.code, Self::ColumnEnum::Code.max_len(), wide),
+            title: trim_string(&value.title, Self::ColumnEnum::Title.max_len(), wide),
+            provider: trim_string(&value.provider, Self::ColumnEnum::Provider.max_len(), wide),
+            date: format!("{}", value.date.format("%m.%d.%Y")),
+            price: format!("{:.2}", value.price),
+            total_value: format!("{:.2}", value.total_value),
+        }
+    }
+
+    fn value_from_col(&self, col: &Self::ColumnEnum) -> &str {
+        match col {
+            Self::ColumnEnum::Code => &self.code,
+            Self::ColumnEnum::Title => &self.title,
+            Self::ColumnEnum::Provider => &self.provider,
+            Self::ColumnEnum::Date => &self.date,
+            Self::ColumnEnum::Price => &self.price,
+            Self::ColumnEnum::TotalValue => &self.total_value,
+        }
+    }
+
+    fn len_from_col(&self, col: &Self::ColumnEnum) -> usize {
+        self.value_from_col(col).len()
+    }
+}
+
+impl OutputTable for FundInformation {
+    type ColumnEnum = FundInformationColumn;
+    type OutputStruct = FundInformationOutput;
 
     const COLUMN_SPACING: usize = 2;
 
     fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool) {
-        let mut col_widths = HashMap::new();
-        for col in columns {
-            let width = match col {
-                FundStatsColumn::Code => 3,
-                FundStatsColumn::Title => list
-                    .iter()
-                    .map(|f| {
-                        let len = f.title.len();
-                        if wide {
-                            len
-                        } else {
-                            std::cmp::min(len, col.max_len())
-                        }
-                    })
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::LastPrice => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.last_price).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::TotalValue => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.total_value).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::Daily => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.daily_return.unwrap_or_default()).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::Monthly => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.monthly_return.unwrap_or_default()).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::ThreeMonthly => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.three_monthly_return.unwrap_or_default()).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::SixMonthly => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.six_monthly_return.unwrap_or_default()).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::Yearly => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.yearly_return.unwrap_or_default()).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::ThreeYearly => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.three_yearly_return.unwrap_or_default()).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundStatsColumn::FiveYearly => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.five_yearly_return.unwrap_or_default()).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-            };
-            col_widths.insert(col.clone(), width + Self::COLUMN_SPACING);
-        }
-
+        let mut print_values: Vec<Self::OutputStruct> = vec![];
         if headers {
-            for col in columns {
-                let col_display = col.name_str();
-                let col_display_len = col_display.len();
-                let mut col_width = *col_widths.get(col).unwrap();
-                if col_display_len > col_width - Self::COLUMN_SPACING {
-                    col_width = col_display_len;
-                    col_widths.insert(col.clone(), col_width + Self::COLUMN_SPACING);
-                }
-
-                if col.left_align() {
-                    print!(
-                        "{:<width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                } else {
-                    print!(
-                        "{:>width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                }
-            }
-            println!();
+            print_values.push(Self::OutputStruct::from_headers());
         }
 
-        for f in list {
+        let mut non_header_values = list
+            .iter()
+            .map(|item| Self::OutputStruct::from_value(item, wide))
+            .collect();
+        print_values.append(&mut non_header_values);
+
+        let mut col_widths = HashMap::with_capacity(columns.len());
+        for col in columns {
+            let max_width = print_values
+                .iter()
+                .map(|val| val.len_from_col(col))
+                .max()
+                .unwrap_or(col.max_len());
+            col_widths.insert(col.clone(), max_width);
+        }
+
+        for f in print_values {
             for col in columns {
                 let width = col_widths.get(col).unwrap();
-                let val = match col {
-                    FundStatsColumn::Code => f.code.clone(),
-                    FundStatsColumn::Title => trim_string(&f.title, col.max_len(), wide),
-                    FundStatsColumn::LastPrice => format!("{:.6}", f.last_price),
-                    FundStatsColumn::TotalValue => format!("{:.6}", f.total_value),
-                    FundStatsColumn::Daily => format!("{:.2}%", f.daily_return.unwrap_or_default()),
-                    FundStatsColumn::Monthly => {
-                        format!("{:.2}%", f.monthly_return.unwrap_or_default())
-                    }
-                    FundStatsColumn::ThreeMonthly => {
-                        format!("{:.2}%", f.three_monthly_return.unwrap_or_default())
-                    }
-                    FundStatsColumn::SixMonthly => {
-                        format!("{:.2}%", f.six_monthly_return.unwrap_or_default())
-                    }
-                    FundStatsColumn::Yearly => {
-                        format!("{:.2}%", f.yearly_return.unwrap_or_default())
-                    }
-                    FundStatsColumn::ThreeYearly => {
-                        format!("{:.2}%", f.three_yearly_return.unwrap_or_default())
-                    }
-                    FundStatsColumn::FiveYearly => {
-                        format!("{:.2}%", f.five_yearly_return.unwrap_or_default())
-                    }
-                };
+                let val = f.value_from_col(col);
 
                 if col.left_align() {
-                    print!("{:<width$}", val, width = width)
+                    print!("{:<width$}", val, width = width);
                 } else {
-                    print!("{:>width$}", val, width = width)
+                    print!("{:>width$}", val, width = width);
                 }
+
+                print!("{}", " ".repeat(Self::COLUMN_SPACING));
             }
 
             println!();
@@ -311,6 +181,7 @@ impl OutputTable for FundStats {
     }
 }
 
+// FundStats
 #[derive(Clone, Debug, Eq, Hash, PartialEq, clap::ValueEnum)]
 pub enum FundStatsColumn {
     Code,
@@ -333,13 +204,13 @@ impl OutputColumn for FundStatsColumn {
             FundStatsColumn::Title => 25,
             FundStatsColumn::LastPrice => 15,
             FundStatsColumn::TotalValue => 30,
-            FundStatsColumn::Daily => 30,
-            FundStatsColumn::Monthly => 30,
-            FundStatsColumn::ThreeMonthly => 30,
-            FundStatsColumn::SixMonthly => 30,
-            FundStatsColumn::Yearly => 30,
-            FundStatsColumn::ThreeYearly => 30,
-            FundStatsColumn::FiveYearly => 30,
+            FundStatsColumn::Daily => 16,
+            FundStatsColumn::Monthly => 16,
+            FundStatsColumn::ThreeMonthly => 16,
+            FundStatsColumn::SixMonthly => 16,
+            FundStatsColumn::Yearly => 16,
+            FundStatsColumn::ThreeYearly => 16,
+            FundStatsColumn::FiveYearly => 16,
         }
     }
 
@@ -376,73 +247,117 @@ impl OutputColumn for FundStatsColumn {
     }
 }
 
-// Portfolio
-impl OutputTable for Portfolio {
-    type ColumnEnum = PortfolioColumn;
+pub struct FundStatsOutput {
+    pub code: String,
+    pub title: String,
+    pub last_price: String,
+    pub total_value: String,
+    pub daily_return: String,
+    pub monthly_return: String,
+    pub three_monthly_return: String,
+    pub six_monthly_return: String,
+    pub yearly_return: String,
+    pub three_yearly_return: String,
+    pub five_yearly_return: String,
+}
+
+impl OutputStruct for FundStatsOutput {
+    type ColumnEnum = FundStatsColumn;
+    type ValueStruct = FundStats;
+
+    fn from_headers() -> Self {
+        Self {
+            code: Self::ColumnEnum::Code.name_str().to_string(),
+            title: Self::ColumnEnum::Title.name_str().to_string(),
+            last_price: Self::ColumnEnum::LastPrice.name_str().to_string(),
+            total_value: Self::ColumnEnum::TotalValue.name_str().to_string(),
+            daily_return: Self::ColumnEnum::Daily.name_str().to_string(),
+            monthly_return: Self::ColumnEnum::Monthly.name_str().to_string(),
+            three_monthly_return: Self::ColumnEnum::ThreeMonthly.name_str().to_string(),
+            six_monthly_return: Self::ColumnEnum::SixMonthly.name_str().to_string(),
+            yearly_return: Self::ColumnEnum::Yearly.name_str().to_string(),
+            three_yearly_return: Self::ColumnEnum::ThreeYearly.name_str().to_string(),
+            five_yearly_return: Self::ColumnEnum::FiveYearly.name_str().to_string(),
+        }
+    }
+
+    fn from_value(value: &Self::ValueStruct, wide: bool) -> Self {
+        Self {
+            code: trim_string(&value.code, Self::ColumnEnum::Code.max_len(), wide),
+            title: trim_string(&value.title, Self::ColumnEnum::Title.max_len(), wide),
+            last_price: format!("{:.2}", value.last_price),
+            total_value: format!("{:.2}", value.total_value),
+            daily_return: format!("{:.2}%", value.daily_return.unwrap_or_default()),
+            monthly_return: format!("{:.2}%", value.monthly_return.unwrap_or_default()),
+            three_monthly_return: format!("{:.2}%", value.three_monthly_return.unwrap_or_default()),
+            six_monthly_return: format!("{:.2}%", value.six_monthly_return.unwrap_or_default()),
+            yearly_return: format!("{:.2}%", value.yearly_return.unwrap_or_default()),
+            three_yearly_return: format!("{:.2}%", value.three_yearly_return.unwrap_or_default()),
+            five_yearly_return: format!("{:.2}%", value.five_yearly_return.unwrap_or_default()),
+        }
+    }
+
+    fn value_from_col(&self, col: &Self::ColumnEnum) -> &str {
+        match col {
+            FundStatsColumn::Code => &self.code,
+            FundStatsColumn::Title => &self.title,
+            FundStatsColumn::LastPrice => &self.last_price,
+            FundStatsColumn::TotalValue => &self.total_value,
+            FundStatsColumn::Daily => &self.daily_return,
+            FundStatsColumn::Monthly => &self.monthly_return,
+            FundStatsColumn::ThreeMonthly => &self.three_monthly_return,
+            FundStatsColumn::SixMonthly => &self.six_monthly_return,
+            FundStatsColumn::Yearly => &self.yearly_return,
+            FundStatsColumn::ThreeYearly => &self.three_yearly_return,
+            FundStatsColumn::FiveYearly => &self.five_yearly_return,
+        }
+    }
+
+    fn len_from_col(&self, col: &Self::ColumnEnum) -> usize {
+        self.value_from_col(col).len()
+    }
+}
+
+impl OutputTable for FundStats {
+    type ColumnEnum = FundStatsColumn;
+    type OutputStruct = FundStatsOutput;
 
     const COLUMN_SPACING: usize = 2;
 
     fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool) {
-        let mut col_widths = HashMap::new();
-        for col in columns {
-            let width = match col {
-                PortfolioColumn::Id => 36,
-                PortfolioColumn::Name => list
-                    .iter()
-                    .map(|p| {
-                        let len = p.name.len();
-                        if wide {
-                            len
-                        } else {
-                            std::cmp::min(len, col.max_len())
-                        }
-                    })
-                    .max()
-                    .unwrap_or(col.max_len()),
-            };
-            col_widths.insert(col.clone(), width + Self::COLUMN_SPACING);
-        }
-
+        let mut print_values: Vec<Self::OutputStruct> = vec![];
         if headers {
-            for col in columns {
-                let col_display = col.name_str();
-
-                let col_display_len = col_display.len();
-                let mut col_width = *col_widths.get(col).unwrap();
-                if col_display_len + Self::COLUMN_SPACING > col_width {
-                    col_width = col_display_len;
-                    col_widths.insert(col.clone(), col_width + Self::COLUMN_SPACING);
-                }
-
-                if col.left_align() {
-                    print!(
-                        "{:<width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                } else {
-                    print!(
-                        "{:>width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                }
-            }
-            println!();
+            print_values.push(Self::OutputStruct::from_headers());
         }
 
-        for p in list {
+        let mut non_header_values = list
+            .iter()
+            .map(|item| Self::OutputStruct::from_value(item, wide))
+            .collect();
+        print_values.append(&mut non_header_values);
+
+        let mut col_widths = HashMap::with_capacity(columns.len());
+        for col in columns {
+            let max_width = print_values
+                .iter()
+                .map(|val| val.len_from_col(col))
+                .max()
+                .unwrap_or(col.max_len());
+            col_widths.insert(col.clone(), max_width);
+        }
+
+        for f in print_values {
             for col in columns {
                 let width = col_widths.get(col).unwrap();
-                let val = match col {
-                    PortfolioColumn::Id => p.id.to_string(),
-                    PortfolioColumn::Name => p.name.clone(),
-                };
+                let val = f.value_from_col(col);
+
                 if col.left_align() {
                     print!("{:<width$}", val, width = width);
                 } else {
                     print!("{:>width$}", val, width = width);
                 }
+
+                print!("{}", " ".repeat(Self::COLUMN_SPACING));
             }
 
             println!();
@@ -450,6 +365,7 @@ impl OutputTable for Portfolio {
     }
 }
 
+// Portfolio
 #[derive(Clone, Debug, Eq, Hash, PartialEq, clap::ValueEnum)]
 pub enum PortfolioColumn {
     Id,
@@ -479,96 +395,81 @@ impl OutputColumn for PortfolioColumn {
     }
 }
 
-// FundToBuy
-impl OutputTable for FundToBuy {
-    type ColumnEnum = FundToBuyColumn;
+pub struct PortfolioOutput {
+    pub id: String,
+    pub name: String,
+}
+
+impl OutputStruct for PortfolioOutput {
+    type ColumnEnum = PortfolioColumn;
+    type ValueStruct = Portfolio;
+
+    fn from_headers() -> Self {
+        Self {
+            id: Self::ColumnEnum::Id.name_str().to_string(),
+            name: Self::ColumnEnum::Name.name_str().to_string(),
+        }
+    }
+
+    fn from_value(value: &Self::ValueStruct, wide: bool) -> Self {
+        Self {
+            id: value.id.to_string(),
+            name: trim_string(&value.name, Self::ColumnEnum::Name.max_len(), wide),
+        }
+    }
+
+    fn value_from_col(&self, col: &Self::ColumnEnum) -> &str {
+        match col {
+            PortfolioColumn::Id => &self.id,
+            PortfolioColumn::Name => &self.name,
+        }
+    }
+
+    fn len_from_col(&self, col: &Self::ColumnEnum) -> usize {
+        self.value_from_col(col).len()
+    }
+}
+
+impl OutputTable for Portfolio {
+    type ColumnEnum = PortfolioColumn;
+    type OutputStruct = PortfolioOutput;
 
     const COLUMN_SPACING: usize = 2;
 
     fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool) {
-        let mut col_widths = HashMap::new();
-        for col in columns {
-            let width = match col {
-                FundToBuyColumn::Code => 3,
-                FundToBuyColumn::Title => list
-                    .iter()
-                    .map(|f| {
-                        let len = f.title.len();
-                        if wide {
-                            len
-                        } else {
-                            std::cmp::min(len, col.max_len())
-                        }
-                    })
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundToBuyColumn::Price => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.price).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundToBuyColumn::Amount => list
-                    .iter()
-                    .map(|f| f.amount.to_string().len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-                FundToBuyColumn::Weight => list
-                    .iter()
-                    .map(|f| format!("{:.6}", f.weight).len())
-                    .max()
-                    .unwrap_or(col.max_len()),
-            };
-            col_widths.insert(col.clone(), width + Self::COLUMN_SPACING);
-        }
-
+        let mut print_values: Vec<Self::OutputStruct> = vec![];
         if headers {
-            for col in columns {
-                let col_display = match col {
-                    FundToBuyColumn::Code => "Code",
-                    FundToBuyColumn::Title => "Title",
-                    FundToBuyColumn::Price => "Price",
-                    FundToBuyColumn::Amount => "Amount",
-                    FundToBuyColumn::Weight => "Weight",
-                };
-                let col_display_len = col_display.len();
-                let mut col_width = *col_widths.get(col).unwrap();
-                if col_display_len > col_width - Self::COLUMN_SPACING {
-                    col_width = col_display_len;
-                    col_widths.insert(col.clone(), col_width + Self::COLUMN_SPACING);
-                }
-
-                if col.left_align() {
-                    print!(
-                        "{:<width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                } else {
-                    print!(
-                        "{:>width$}",
-                        col_display,
-                        width = col_widths.get(col).unwrap()
-                    );
-                }
-            }
-            println!();
+            print_values.push(Self::OutputStruct::from_headers());
         }
 
-        for f in list {
+        let mut non_header_values = list
+            .iter()
+            .map(|item| Self::OutputStruct::from_value(item, wide))
+            .collect();
+        print_values.append(&mut non_header_values);
+
+        let mut col_widths = HashMap::with_capacity(columns.len());
+        for col in columns {
+            let max_width = print_values
+                .iter()
+                .map(|val| val.len_from_col(col))
+                .max()
+                .unwrap_or(col.max_len());
+            col_widths.insert(col.clone(), max_width);
+        }
+
+        for f in print_values {
             for col in columns {
                 let width = col_widths.get(col).unwrap();
-                let val = match col {
-                    FundToBuyColumn::Code => f.code.clone(),
-                    FundToBuyColumn::Title => trim_string(&f.title, col.max_len(), wide),
-                    FundToBuyColumn::Price => format!("{:.6}", f.price),
-                    FundToBuyColumn::Amount => f.amount.to_string(),
-                    FundToBuyColumn::Weight => format!("{:.6}", f.weight),
-                };
+                let val = f.value_from_col(col);
+
                 if col.left_align() {
                     print!("{:<width$}", val, width = width);
                 } else {
                     print!("{:>width$}", val, width = width);
                 }
+
+                print!("{}", " ".repeat(Self::COLUMN_SPACING));
             }
 
             println!();
@@ -576,6 +477,7 @@ impl OutputTable for FundToBuy {
     }
 }
 
+// FundToBuy
 #[derive(Clone, Debug, Eq, Hash, PartialEq, clap::ValueEnum)]
 pub enum FundToBuyColumn {
     Code,
@@ -613,6 +515,100 @@ impl OutputColumn for FundToBuyColumn {
             FundToBuyColumn::Price => false,
             FundToBuyColumn::Amount => false,
             FundToBuyColumn::Weight => false,
+        }
+    }
+}
+
+pub struct FundToBuyOutput {
+    pub code: String,
+    pub title: String,
+    pub price: String,
+    pub amount: String,
+    pub weight: String,
+}
+
+impl OutputStruct for FundToBuyOutput {
+    type ColumnEnum = FundToBuyColumn;
+    type ValueStruct = FundToBuy;
+
+    fn from_headers() -> Self {
+        Self {
+            code: Self::ColumnEnum::Code.name_str().to_string(),
+            title: Self::ColumnEnum::Title.name_str().to_string(),
+            price: Self::ColumnEnum::Price.name_str().to_string(),
+            amount: Self::ColumnEnum::Amount.name_str().to_string(),
+            weight: Self::ColumnEnum::Weight.name_str().to_string(),
+        }
+    }
+
+    fn from_value(value: &Self::ValueStruct, wide: bool) -> Self {
+        Self {
+            code: trim_string(&value.code, Self::ColumnEnum::Code.max_len(), wide),
+            title: trim_string(&value.title, Self::ColumnEnum::Title.max_len(), wide),
+            price: format!("{:.2}", value.price),
+            amount: value.amount.to_string(),
+            weight: format!("{:.2}", value.weight),
+        }
+    }
+
+    fn value_from_col(&self, col: &Self::ColumnEnum) -> &str {
+        match col {
+            FundToBuyColumn::Code => &self.code,
+            FundToBuyColumn::Title => &self.title,
+            FundToBuyColumn::Price => &self.price,
+            FundToBuyColumn::Amount => &self.amount,
+            FundToBuyColumn::Weight => &self.weight,
+        }
+    }
+
+    fn len_from_col(&self, col: &Self::ColumnEnum) -> usize {
+        self.value_from_col(col).len()
+    }
+}
+
+impl OutputTable for FundToBuy {
+    type ColumnEnum = FundToBuyColumn;
+    type OutputStruct = FundToBuyOutput;
+
+    const COLUMN_SPACING: usize = 2;
+
+    fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool) {
+        let mut print_values: Vec<Self::OutputStruct> = vec![];
+        if headers {
+            print_values.push(Self::OutputStruct::from_headers());
+        }
+
+        let mut non_header_values = list
+            .iter()
+            .map(|item| Self::OutputStruct::from_value(item, wide))
+            .collect();
+        print_values.append(&mut non_header_values);
+
+        let mut col_widths = HashMap::with_capacity(columns.len());
+        for col in columns {
+            let max_width = print_values
+                .iter()
+                .map(|val| val.len_from_col(col))
+                .max()
+                .unwrap_or(col.max_len());
+            col_widths.insert(col.clone(), max_width);
+        }
+
+        for f in print_values {
+            for col in columns {
+                let width = col_widths.get(col).unwrap();
+                let val = f.value_from_col(col);
+
+                if col.left_align() {
+                    print!("{:<width$}", val, width = width);
+                } else {
+                    print!("{:>width$}", val, width = width);
+                }
+
+                print!("{}", " ".repeat(Self::COLUMN_SPACING));
+            }
+
+            println!();
         }
     }
 }
