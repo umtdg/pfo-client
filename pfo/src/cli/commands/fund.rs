@@ -2,7 +2,8 @@ use anyhow::Result;
 
 use crate::cli::args::FundCommand;
 use crate::client::Client;
-use crate::output::{FundInformationColumn, FundStatsColumn};
+use crate::client::models::fund::{FundInformation, FundStats};
+use crate::output::{FundInformationColumn, FundStatsColumn, OutputTable};
 
 pub async fn handle(cmd: FundCommand, client: Client) -> Result<()> {
     match cmd {
@@ -23,7 +24,8 @@ pub async fn handle(cmd: FundCommand, client: Client) -> Result<()> {
                 FundInformationColumn::TotalValue,
             ]);
             let headers = !no_headers;
-            crate::output::print_fund_infos(&fund_infos, &columns, headers, wide);
+
+            FundInformation::print_table(&fund_infos, &columns, headers, wide);
         }
         FundCommand::Stats {
             codes,
@@ -41,7 +43,7 @@ pub async fn handle(cmd: FundCommand, client: Client) -> Result<()> {
                 FundStatsColumn::FiveYearly,
             ]);
             let headers = !no_headers;
-            crate::output::print_fund_stats(&fund_stats, &columns, headers, wide);
+            FundStats::print_table(&fund_stats, &columns, headers, wide);
         }
     }
 

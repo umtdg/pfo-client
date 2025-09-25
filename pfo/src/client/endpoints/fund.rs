@@ -4,18 +4,6 @@ use chrono::NaiveDate;
 use crate::client::Client;
 use crate::client::models::fund::{FundInformation, FundStats};
 
-pub async fn get_fund(
-    client: &Client,
-    code: String,
-    date: Option<NaiveDate>,
-) -> Result<FundInformation> {
-    _ = client;
-    _ = code;
-    _ = date;
-
-    unimplemented!("Getting single fund is not implemented yet")
-}
-
 pub async fn get_funds(
     client: &Client,
     codes: Vec<String>,

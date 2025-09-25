@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::output::{FundInformationColumn, FundStatsColumn, FundToBuyColumn, PortfolioColumn};
 
 #[derive(Parser)]
-#[command(name = "portfolio-cli")]
+#[command(name = "pfo")]
 #[clap(disable_help_flag = true)]
 pub struct Args {
     #[command(subcommand)]
@@ -16,9 +16,6 @@ pub struct Args {
 
     #[arg(short, long, global = true)]
     pub port: Option<u16>,
-
-    #[arg(short, long, global = true)]
-    pub debug: bool,
 
     #[arg(short, long, global = true)]
     pub config: Option<String>,

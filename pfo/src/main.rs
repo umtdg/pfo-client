@@ -2,7 +2,6 @@ mod cli;
 mod client;
 mod config;
 mod output;
-mod turkish;
 
 use anyhow::{Context, Result};
 use clap::Parser;

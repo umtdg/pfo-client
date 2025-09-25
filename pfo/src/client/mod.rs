@@ -49,10 +49,6 @@ impl Client {
         update_portfolio(self, id, update).await
     }
 
-    pub async fn get_fund(&self, code: String, date: Option<NaiveDate>) -> Result<FundInformation> {
-        get_fund(self, code, date).await
-    }
-
     pub async fn get_funds(
         &self,
         codes: Vec<String>,

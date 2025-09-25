@@ -1,15 +1,15 @@
 use std::collections::HashSet;
 
-use crate::turkish::*;
 use anyhow::{Context, Result};
+use pfo_core::turkish_collate;
 
 use crate::{
     cli::args::PortfolioCommand,
     client::{
         Client,
-        models::portfolio::{PortfolioFundAdd, PortfolioUpdate},
+        models::portfolio::{FundToBuy, Portfolio, PortfolioFundAdd, PortfolioUpdate},
     },
-    output::{FundToBuyColumn, PortfolioColumn},
+    output::{FundToBuyColumn, OutputTable, PortfolioColumn},
 };
 
 pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
@@ -22,7 +22,7 @@ pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
             let portfolios = client.list_portfolios().await?;
             let columns = output.unwrap_or(vec![PortfolioColumn::Id, PortfolioColumn::Name]);
             let headers = !no_headers;
-            crate::output::print_portfolios(&portfolios, &columns, headers, wide);
+            Portfolio::print_table(&portfolios, &columns, headers, wide);
         }
         PortfolioCommand::Get {
             id,
@@ -33,7 +33,7 @@ pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
             let portfolios = vec![client.get_portfolio(id).await?];
             let columns = output.unwrap_or(vec![PortfolioColumn::Id, PortfolioColumn::Name]);
             let headers = !no_headers;
-            crate::output::print_portfolios(&portfolios, &columns, headers, wide);
+            Portfolio::print_table(&portfolios, &columns, headers, wide);
         }
         PortfolioCommand::Prices {
             id,
@@ -45,7 +45,9 @@ pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
             no_headers,
             wide,
         } => {
-            let mut funds = client.get_portfolio_prices(id, budget, date, from, codes).await?;
+            let mut funds = client
+                .get_portfolio_prices(id, budget, date, from, codes)
+                .await?;
             funds.sort_by(|lhs, rhs| turkish_collate(&lhs.title, &rhs.title));
 
             let columns = output.unwrap_or(vec![
@@ -55,7 +57,7 @@ pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
                 FundToBuyColumn::Price,
             ]);
             let headers = !no_headers;
-            crate::output::print_fund_buy_prices(&funds, &columns, headers, wide);
+            FundToBuy::print_table(&funds, &columns, headers, wide);
         }
         PortfolioCommand::Add {
             id,
