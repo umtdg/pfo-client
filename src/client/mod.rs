@@ -7,6 +7,7 @@ use models::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 use uuid::Uuid;
 
 use crate::client::models::fund::FundInformation;
+use crate::client::models::fund::FundStats;
 
 use super::config::Config;
 use endpoints::fund::*;
@@ -59,5 +60,9 @@ impl Client {
         from: Option<NaiveDate>,
     ) -> Result<Vec<FundInformation>> {
         get_funds(self, codes, date, from).await
+    }
+
+    pub async fn get_fund_stats(&self, codes: Vec<String>) -> Result<Vec<FundStats>> {
+        get_fund_stats(self, codes).await
     }
 }

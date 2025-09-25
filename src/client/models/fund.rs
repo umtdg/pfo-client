@@ -10,3 +10,18 @@ pub struct FundInformation {
     pub price: f32,
     pub total_value: f32,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct FundStats {
+    pub code: String,
+    pub title: String,
+    pub last_price: f32,
+    pub total_value: f32,
+    pub daily_return: Option<f32>,
+    pub monthly_return: Option<f32>,
+    pub three_monthly_return: Option<f32>,
+    pub six_monthly_return: Option<f32>,
+    pub yearly_return: Option<f32>,
+    pub three_yearly_return: Option<f32>,
+    pub five_yearly_return: Option<f32>,
+}

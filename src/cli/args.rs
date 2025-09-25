@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use clap::{ArgAction, Parser, Subcommand};
 use uuid::Uuid;
 
-use crate::output::{FundInformationColumn, FundToBuyColumn, PortfolioColumn};
+use crate::output::{FundInformationColumn, FundStatsColumn, FundToBuyColumn, PortfolioColumn};
 
 #[derive(Parser)]
 #[command(name = "portfolio-cli")]
@@ -146,6 +146,21 @@ pub enum FundCommand {
 
         #[arg(short, long, value_delimiter = ',')]
         output: Option<Vec<FundInformationColumn>>,
+
+        #[arg(long)]
+        no_headers: bool,
+
+        #[arg(short, long)]
+        wide: bool,
+    },
+
+    #[command(name = "stats", visible_alias = "s", about = "Get fund(s) statistics")]
+    Stats {
+        #[arg(value_name = "FUND_CODES", value_delimiter = ',')]
+        codes: Vec<String>,
+
+        #[arg(short, long, value_delimiter = ',')]
+        output: Option<Vec<FundStatsColumn>>,
 
         #[arg(long)]
         no_headers: bool,

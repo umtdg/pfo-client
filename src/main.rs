@@ -1,8 +1,8 @@
-pub mod cli;
-pub mod client;
-pub mod config;
-pub mod output;
-pub mod turkish;
+mod cli;
+mod client;
+mod config;
+mod output;
+mod turkish;
 
 use anyhow::{Context, Result};
 use clap::Parser;

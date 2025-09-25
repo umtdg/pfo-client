@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use chrono::NaiveDate;
 
 use crate::client::Client;
-use crate::client::models::fund::FundInformation;
+use crate::client::models::fund::{FundInformation, FundStats};
 
 pub async fn get_fund(
     client: &Client,
@@ -42,4 +42,22 @@ pub async fn get_funds(
     let fund_list = res.json().await.context("Failed to parse fund list JSON")?;
 
     Ok(fund_list)
+}
+
+pub async fn get_fund_stats(client: &Client, codes: Vec<String>) -> Result<Vec<FundStats>> {
+    let url = format!("{}/f/stats", client.base_url);
+    let mut req = client.inner.get(url);
+
+    if !codes.is_empty() {
+        req = req.query(&[("codes", codes.join(","))]);
+    }
+
+    let res = req.send().await.context("Failed to fetch fund stats")?;
+
+    let stat_list = res
+        .json()
+        .await
+        .context("Failed to parse fund stats JSON")?;
+
+    Ok(stat_list)
 }
