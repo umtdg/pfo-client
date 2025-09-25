@@ -38,19 +38,17 @@ impl Client {
         id: Uuid,
         budget: f32,
         date: Option<NaiveDate>,
+        from: Option<NaiveDate>,
+        codes: Vec<String>,
     ) -> Result<Vec<FundToBuy>> {
-        get_portfolio_prices(self, id, budget, date).await
+        get_portfolio_prices(self, id, budget, date, from, codes).await
     }
 
     pub async fn update_portfolio(&self, id: Uuid, update: PortfolioUpdate) -> Result<()> {
         update_portfolio(self, id, update).await
     }
 
-    pub async fn get_fund(
-        &self,
-        code: String,
-        date: Option<NaiveDate>,
-    ) -> Result<FundInformation> {
+    pub async fn get_fund(&self, code: String, date: Option<NaiveDate>) -> Result<FundInformation> {
         get_fund(self, code, date).await
     }
 

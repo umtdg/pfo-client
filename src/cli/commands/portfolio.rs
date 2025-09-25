@@ -39,11 +39,13 @@ pub async fn handle(cmd: PortfolioCommand, client: Client) -> Result<()> {
             id,
             budget,
             date,
+            from,
+            codes,
             output,
             no_headers,
             wide,
         } => {
-            let mut funds = client.get_portfolio_prices(id, budget, date).await?;
+            let mut funds = client.get_portfolio_prices(id, budget, date, from, codes).await?;
             funds.sort_by(|lhs, rhs| turkish_collate(&lhs.title, &rhs.title));
 
             let columns = output.unwrap_or(vec![

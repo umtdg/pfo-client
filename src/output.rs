@@ -106,7 +106,7 @@ impl OutputColumn for FundInformationColumn {
             FundInformationColumn::Provider => 25,
             FundInformationColumn::Date => 10,
             FundInformationColumn::Price => 15,
-            FundInformationColumn::TotalValue => 15,
+            FundInformationColumn::TotalValue => 30,
         }
     }
 
@@ -360,7 +360,7 @@ pub fn print_fund_infos(
                 .unwrap_or(col.max_len()),
             FundInformationColumn::TotalValue => fund_infos
                 .iter()
-                .map(|f| format!("{:.6}", f.price).len())
+                .map(|f| format!("{:.6}", f.total_value).len())
                 .max()
                 .unwrap_or(col.max_len()),
         };

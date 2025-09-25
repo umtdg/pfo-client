@@ -86,6 +86,12 @@ pub enum PortfolioCommand {
         #[arg(short, long, value_parser = parse_naive_date)]
         date: Option<NaiveDate>,
 
+        #[arg(short, long, value_parser = parse_naive_date)]
+        from: Option<NaiveDate>,
+
+        #[arg(short, long, value_delimiter = ',')]
+        codes: Vec<String>,
+
         #[arg(short, long, value_delimiter = ',')]
         output: Option<Vec<FundToBuyColumn>>,
 

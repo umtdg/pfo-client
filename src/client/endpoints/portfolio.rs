@@ -39,17 +39,24 @@ pub async fn get_portfolio_prices(
     id: Uuid,
     budget: f32,
     date: Option<NaiveDate>,
+    from: Option<NaiveDate>,
+    codes: Vec<String>,
 ) -> Result<Vec<FundToBuy>> {
-    let url = format!("{}/p/{}/prices?budget={}", client.base_url, id, budget);
-    let mut req = client
-        .inner
-        .get(url)
-        .query(&[("budget", budget)]);
-        
+    let url = format!("{}/p/{}/prices", client.base_url, id);
+    let mut req = client.inner.get(url).query(&[("budget", budget)]);
+
     if let Some(date) = date {
         req = req.query(&[("date", &format!("{}", date.format("%m.%d.%Y")))]);
     }
-    
+
+    if let Some(from) = from {
+        req = req.query(&[("fetchFrom", &format!("{}", from.format("%m.%d.%Y")))]);
+    }
+
+    if !codes.is_empty() {
+        req = req.query(&[("codes", codes.join(","))]);
+    }
+
     let res = req.send().await.context("Failed to fetch fund prices")?;
 
     let funds = res
