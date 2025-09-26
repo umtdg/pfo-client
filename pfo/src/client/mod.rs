@@ -58,7 +58,7 @@ impl Client {
         get_funds(self, codes, date, from).await
     }
 
-    pub async fn get_fund_stats(&self, codes: Vec<String>) -> Result<Vec<FundStats>> {
-        get_fund_stats(self, codes).await
+    pub async fn get_fund_stats(&self, codes: Vec<String>, force: bool) -> Result<Vec<FundStats>> {
+        get_fund_stats(self, codes, force).await
     }
 }

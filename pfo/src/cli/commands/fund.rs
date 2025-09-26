@@ -30,10 +30,11 @@ pub async fn handle(cmd: FundCommand, client: Client) -> Result<()> {
         FundCommand::Stats {
             codes,
             output,
+            force,
             no_headers,
             wide,
         } => {
-            let fund_stats = client.get_fund_stats(codes).await?;
+            let fund_stats = client.get_fund_stats(codes, force).await?;
             let columns = output.unwrap_or(vec![
                 FundStatsColumn::Code,
                 FundStatsColumn::LastPrice,

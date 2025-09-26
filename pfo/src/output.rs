@@ -186,6 +186,7 @@ impl OutputTable for FundInformation {
 pub enum FundStatsColumn {
     Code,
     Title,
+    UpdatedAt,
     LastPrice,
     TotalValue,
     Daily,
@@ -203,6 +204,7 @@ impl OutputColumn for FundStatsColumn {
             FundStatsColumn::Code => 3,
             FundStatsColumn::Title => 25,
             FundStatsColumn::LastPrice => 15,
+            FundStatsColumn::UpdatedAt => 10,
             FundStatsColumn::TotalValue => 30,
             FundStatsColumn::Daily => 16,
             FundStatsColumn::Monthly => 16,
@@ -218,15 +220,16 @@ impl OutputColumn for FundStatsColumn {
         match self {
             FundStatsColumn::Code => "Code",
             FundStatsColumn::Title => "Title",
-            FundStatsColumn::LastPrice => "LastPrice",
-            FundStatsColumn::TotalValue => "TotalValue",
+            FundStatsColumn::UpdatedAt => "Updated At",
+            FundStatsColumn::LastPrice => "Last Price",
+            FundStatsColumn::TotalValue => "Total Value",
             FundStatsColumn::Daily => "Daily",
             FundStatsColumn::Monthly => "Monthly",
-            FundStatsColumn::ThreeMonthly => "ThreeMonthly",
-            FundStatsColumn::SixMonthly => "SixMonthly",
+            FundStatsColumn::ThreeMonthly => "Three Monthly",
+            FundStatsColumn::SixMonthly => "Six Monthly",
             FundStatsColumn::Yearly => "Yearly",
-            FundStatsColumn::ThreeYearly => "ThreeYearly",
-            FundStatsColumn::FiveYearly => "FiveYearly",
+            FundStatsColumn::ThreeYearly => "Three Yearly",
+            FundStatsColumn::FiveYearly => "Five Yearly",
         }
     }
 
@@ -234,6 +237,7 @@ impl OutputColumn for FundStatsColumn {
         match self {
             FundStatsColumn::Code => true,
             FundStatsColumn::Title => true,
+            FundStatsColumn::UpdatedAt => true,
             FundStatsColumn::LastPrice => false,
             FundStatsColumn::TotalValue => false,
             FundStatsColumn::Daily => true,
@@ -250,6 +254,7 @@ impl OutputColumn for FundStatsColumn {
 pub struct FundStatsOutput {
     pub code: String,
     pub title: String,
+    pub updated_at: String,
     pub last_price: String,
     pub total_value: String,
     pub daily_return: String,
@@ -269,6 +274,7 @@ impl OutputStruct for FundStatsOutput {
         Self {
             code: Self::ColumnEnum::Code.name_str().to_string(),
             title: Self::ColumnEnum::Title.name_str().to_string(),
+            updated_at: Self::ColumnEnum::UpdatedAt.name_str().to_string(),
             last_price: Self::ColumnEnum::LastPrice.name_str().to_string(),
             total_value: Self::ColumnEnum::TotalValue.name_str().to_string(),
             daily_return: Self::ColumnEnum::Daily.name_str().to_string(),
@@ -285,6 +291,7 @@ impl OutputStruct for FundStatsOutput {
         Self {
             code: trim_string(&value.code, Self::ColumnEnum::Code.max_len(), wide),
             title: trim_string(&value.title, Self::ColumnEnum::Title.max_len(), wide),
+            updated_at: value.updated_at.format("%m.%d.%Y").to_string(),
             last_price: format!("{:.2}", value.last_price),
             total_value: format!("{:.2}", value.total_value),
             daily_return: format!("{:.2}%", value.daily_return.unwrap_or_default()),
@@ -301,6 +308,7 @@ impl OutputStruct for FundStatsOutput {
         match col {
             FundStatsColumn::Code => &self.code,
             FundStatsColumn::Title => &self.title,
+            FundStatsColumn::UpdatedAt => &self.updated_at,
             FundStatsColumn::LastPrice => &self.last_price,
             FundStatsColumn::TotalValue => &self.total_value,
             FundStatsColumn::Daily => &self.daily_return,

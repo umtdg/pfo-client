@@ -159,6 +159,9 @@ pub enum FundCommand {
         #[arg(short, long, value_delimiter = ',')]
         output: Option<Vec<FundStatsColumn>>,
 
+        #[arg(short, long)]
+        force: bool,
+
         #[arg(long)]
         no_headers: bool,
 

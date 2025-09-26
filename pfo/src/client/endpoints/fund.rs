@@ -32,12 +32,20 @@ pub async fn get_funds(
     Ok(fund_list)
 }
 
-pub async fn get_fund_stats(client: &Client, codes: Vec<String>) -> Result<Vec<FundStats>> {
+pub async fn get_fund_stats(
+    client: &Client,
+    codes: Vec<String>,
+    force: bool,
+) -> Result<Vec<FundStats>> {
     let url = format!("{}/f/stats", client.base_url);
     let mut req = client.inner.get(url);
 
     if !codes.is_empty() {
         req = req.query(&[("codes", codes.join(","))]);
+    }
+
+    if force {
+        req = req.query(&[("force", force)]);
     }
 
     let res = req.send().await.context("Failed to fetch fund stats")?;

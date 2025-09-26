@@ -15,6 +15,7 @@ pub struct FundInformation {
 pub struct FundStats {
     pub code: String,
     pub title: String,
+    pub updated_at: NaiveDate,
     pub last_price: f32,
     pub total_value: f32,
     pub daily_return: Option<f32>,
