@@ -6,6 +6,7 @@ use crate::client::Client;
 
 pub mod args;
 pub mod commands;
+pub mod sort;
 
 pub async fn run(args: Args, client: Client) -> Result<()> {
     match args.command {

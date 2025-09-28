@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
 
+use crate::cli::sort::{SortArguments, SortByFundInfo, SortByFundStats};
 use crate::client::Client;
 use crate::client::models::fund::{FundInformation, FundStats};
 
@@ -9,9 +10,13 @@ pub async fn get_funds(
     codes: Vec<String>,
     date: Option<NaiveDate>,
     from: Option<NaiveDate>,
+    sort: SortArguments<SortByFundInfo>,
 ) -> Result<Vec<FundInformation>> {
     let url = format!("{}/f", client.base_url);
-    let mut req = client.inner.get(url);
+    let mut req = client.inner.get(url).query(&[
+        ("sortBy", sort.by.to_string()),
+        ("sortDirection", sort.dir.to_string()),
+    ]);
 
     if !codes.is_empty() {
         req = req.query(&[("codes", codes.join(","))]);
@@ -36,9 +41,13 @@ pub async fn get_fund_stats(
     client: &Client,
     codes: Vec<String>,
     force: bool,
+    sort: SortArguments<SortByFundStats>,
 ) -> Result<Vec<FundStats>> {
     let url = format!("{}/f/stats", client.base_url);
-    let mut req = client.inner.get(url);
+    let mut req = client.inner.get(url).query(&[
+        ("sortBy", sort.by.to_string()),
+        ("sortDirection", sort.dir.to_string()),
+    ]);
 
     if !codes.is_empty() {
         req = req.query(&[("codes", codes.join(","))]);

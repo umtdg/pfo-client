@@ -2,7 +2,10 @@ use chrono::NaiveDate;
 use clap::{ArgAction, Parser, Subcommand};
 use uuid::Uuid;
 
-use crate::output::{FundInformationColumn, FundStatsColumn, FundToBuyColumn, PortfolioColumn};
+use crate::{
+    cli::sort::{SortArguments, SortByFundInfo, SortByFundStats},
+    output::{FundInformationColumn, FundStatsColumn, FundToBuyColumn, PortfolioColumn},
+};
 
 #[derive(Parser)]
 #[command(name = "pfo")]
@@ -141,6 +144,9 @@ pub enum FundCommand {
         #[arg(short, long, value_parser = parse_naive_date)]
         from: Option<NaiveDate>,
 
+        #[arg(short, long, value_parser = SortArguments::<SortByFundInfo>::value_parser)]
+        sort: SortArguments<SortByFundInfo>,
+
         #[arg(short, long, value_delimiter = ',')]
         output: Option<Vec<FundInformationColumn>>,
 
@@ -156,11 +162,19 @@ pub enum FundCommand {
         #[arg(value_name = "FUND_CODES", value_delimiter = ',')]
         codes: Vec<String>,
 
-        #[arg(short, long, value_delimiter = ',')]
-        output: Option<Vec<FundStatsColumn>>,
-
         #[arg(short, long)]
         force: bool,
+
+        #[arg(
+            short, long,
+            default_value = "fiveYearlyReturn desc",
+            value_parser = SortArguments::<SortByFundStats>::value_parser,
+            help = SortArguments::<SortByFundStats>::help())
+        ]
+        sort: SortArguments<SortByFundStats>,
+
+        #[arg(short, long, value_delimiter = ',')]
+        output: Option<Vec<FundStatsColumn>>,
 
         #[arg(long)]
         no_headers: bool,

@@ -11,11 +11,12 @@ pub async fn handle(cmd: FundCommand, client: Client) -> Result<()> {
             codes,
             date,
             from,
+            sort,
             output,
             no_headers,
             wide,
         } => {
-            let fund_infos = client.get_funds(codes, date, from).await?;
+            let fund_infos = client.get_funds(codes, date, from, sort).await?;
             let columns = output.unwrap_or(vec![
                 FundInformationColumn::Code,
                 FundInformationColumn::Title,
@@ -29,12 +30,13 @@ pub async fn handle(cmd: FundCommand, client: Client) -> Result<()> {
         }
         FundCommand::Stats {
             codes,
-            output,
             force,
+            sort,
+            output,
             no_headers,
             wide,
         } => {
-            let fund_stats = client.get_fund_stats(codes, force).await?;
+            let fund_stats = client.get_fund_stats(codes, force, sort).await?;
             let columns = output.unwrap_or(vec![
                 FundStatsColumn::Code,
                 FundStatsColumn::LastPrice,

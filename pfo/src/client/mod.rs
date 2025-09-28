@@ -6,6 +6,9 @@ use chrono::NaiveDate;
 use models::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 use uuid::Uuid;
 
+use crate::cli::sort::SortArguments;
+use crate::cli::sort::SortByFundInfo;
+use crate::cli::sort::SortByFundStats;
 use crate::client::models::fund::FundInformation;
 use crate::client::models::fund::FundStats;
 
@@ -54,11 +57,17 @@ impl Client {
         codes: Vec<String>,
         date: Option<NaiveDate>,
         from: Option<NaiveDate>,
+        sort: SortArguments<SortByFundInfo>,
     ) -> Result<Vec<FundInformation>> {
-        get_funds(self, codes, date, from).await
+        get_funds(self, codes, date, from, sort).await
     }
 
-    pub async fn get_fund_stats(&self, codes: Vec<String>, force: bool) -> Result<Vec<FundStats>> {
-        get_fund_stats(self, codes, force).await
+    pub async fn get_fund_stats(
+        &self,
+        codes: Vec<String>,
+        force: bool,
+        sort: SortArguments<SortByFundStats>,
+    ) -> Result<Vec<FundStats>> {
+        get_fund_stats(self, codes, force, sort).await
     }
 }
