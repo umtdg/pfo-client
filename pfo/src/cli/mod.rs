@@ -1,16 +1,7 @@
-use anyhow::Result;
+mod args;
+mod command;
+mod sort;
 
-use args::Args;
-
-use crate::client::Client;
-
-pub mod args;
-pub mod commands;
-pub mod sort;
-
-pub async fn run(args: Args, client: Client) -> Result<()> {
-    match args.command {
-        args::Commands::Portfolio { command } => commands::portfolio::handle(command, client).await,
-        args::Commands::Fund { command } => commands::fund::handle(command, client).await,
-    }
-}
+pub use args::Args;
+pub use command::Command;
+pub use sort::{SortArgumentEnum, SortArguments};

@@ -1,5 +1,11 @@
 use clap::ValueEnum;
 
+pub trait SortArgumentEnum: clap::ValueEnum + ToString {
+    fn get_help_string() -> String;
+
+    fn value_parser(s: &str) -> Result<Self, String>;
+}
+
 #[derive(Clone, Debug, clap::ValueEnum)]
 pub enum SortDirection {
     Asc,
@@ -16,91 +22,41 @@ impl ToString for SortDirection {
     }
 }
 
-#[derive(Clone, Debug, clap::ValueEnum)]
-pub enum SortByFundInfo {
-    Code,
-    Title,
-    Provider,
-    Price,
-    TotalValue,
-}
-
-impl ToString for SortByFundInfo {
-    fn to_string(&self) -> String {
-        match self {
-            SortByFundInfo::Code => "code",
-            SortByFundInfo::Title => "title",
-            SortByFundInfo::Provider => "provider",
-            SortByFundInfo::Price => "price",
-            SortByFundInfo::TotalValue => "totalValue",
-        }
-        .into()
+impl SortArgumentEnum for SortDirection {
+    fn get_help_string() -> String {
+        Self::value_variants()
+            .iter()
+            .map(|v| v.to_possible_value().unwrap().get_name().to_string())
+            .collect::<Vec<String>>()
+            .join(" | ")
     }
-}
 
-#[derive(Clone, Debug, clap::ValueEnum)]
-pub enum SortByFundStats {
-    Code,
-    Title,
-    LastPrice,
-    TotalValue,
-    DailyReturn,
-    MonthlyReturn,
-    ThreeMonthlyReturn,
-    SixMonthlyReturn,
-    YearlyReturn,
-    ThreeYearlyReturn,
-    FiveYearlyReturn,
-}
-
-impl ToString for SortByFundStats {
-    fn to_string(&self) -> String {
-        match self {
-            SortByFundStats::Code => "code",
-            SortByFundStats::Title => "title",
-            SortByFundStats::LastPrice => "lastPrice",
-            SortByFundStats::TotalValue => "totalValue",
-            SortByFundStats::DailyReturn => "dailyReturn",
-            SortByFundStats::MonthlyReturn => "monthlyReturn",
-            SortByFundStats::ThreeMonthlyReturn => "threeMonthlyReturn",
-            SortByFundStats::SixMonthlyReturn => "sixMonthlyReturn",
-            SortByFundStats::YearlyReturn => "yearlyReturn",
-            SortByFundStats::ThreeYearlyReturn => "threeYearlyReturn",
-            SortByFundStats::FiveYearlyReturn => "fiveYearlyReturn",
-        }.into()
+    fn value_parser(s: &str) -> Result<Self, String> {
+        Self::from_str(s, true)
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct SortArguments<T: clap::ValueEnum + ToString> {
+pub struct SortArguments<T: SortArgumentEnum> {
     pub dir: SortDirection,
     pub by: T,
 }
 
-impl<T: clap::ValueEnum + ToString> SortArguments<T> {
+impl<T: SortArgumentEnum> SortArguments<T> {
     pub fn value_parser(s: &str) -> Result<Self, String> {
         let mut parts = s.split_ascii_whitespace();
-        let by = T::from_str(parts.next().unwrap_or_default(), true)?;
-        let dir = SortDirection::from_str(parts.next().unwrap_or("asc"), true)?;
 
-        Ok(Self { by, dir })
+        Ok(Self {
+            by: T::value_parser(parts.next().unwrap_or_default())?,
+            dir: SortDirection::value_parser(parts.next().unwrap_or("asc"))?,
+        })
     }
 
-    pub fn help() -> String {
-        let possible_by_values: Vec<String> = T::value_variants()
-            .iter()
-            .map(|v| v.to_possible_value().unwrap().get_name().to_string())
-            .collect();
-
-        let possible_dirs: Vec<String> = SortDirection::value_variants()
-            .iter()
-            .map(|v| v.to_possible_value().unwrap().get_name().to_string())
-            .collect();
-
+    pub fn get_help() -> String {
         format!(
             "<by> <direction> [, <by> <direction>]\nBY: {}\nDIRECTION: {}",
-            possible_by_values.join(" | "),
-            possible_dirs.join(" | ")
+            T::get_help_string(),
+            SortDirection::get_help_string(),
         )
     }
 }

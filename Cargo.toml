@@ -10,3 +10,7 @@ version = "0.1.0"
 license = "MIT"
 authors = ["Umut Dag <umu7d9@gmail.com>"]
 edition = "2024"
+
+[workspace.dependencies]
+anyhow = { version = "1.0", default-features = false }
+chrono = { version = "0.4.41", default-features = false, features = ["alloc", "serde", "std"] }

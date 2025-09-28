@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::cli::args::Args;
+use crate::cli::Args;
 
 pub struct Config {
     pub host: String,
@@ -9,9 +9,9 @@ pub struct Config {
 
 impl Config {
     pub fn from_args(args: &Args) -> Result<Self> {
-        let host = args.host.clone().unwrap_or_else(|| "localhost".to_string());
-        let port = args.port.unwrap_or(8080);
-
-        Ok(Config { host, port })
+        Ok(Config {
+            host: args.host.clone().unwrap_or("localhost".into()),
+            port: args.port.unwrap_or(8080),
+        })
     }
 }

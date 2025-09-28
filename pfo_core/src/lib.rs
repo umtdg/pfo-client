@@ -1,5 +1,8 @@
 use std::cmp::Ordering;
 
+use anyhow::Result;
+use chrono::{NaiveDate, ParseError};
+
 pub fn turkish_char_order(c: char) -> usize {
     match c {
         'A' => 0,
@@ -88,4 +91,8 @@ pub fn trim_string(s: &str, len: usize, wide: bool) -> String {
         let end = s.char_indices().nth(len).unwrap_or((s.len(), '0')).0;
         s[..end].to_string()
     }
+}
+
+pub fn parse_naive_date(s: &str) -> Result<NaiveDate, ParseError> {
+    NaiveDate::parse_from_str(s, "%m.%d.%Y")
 }
