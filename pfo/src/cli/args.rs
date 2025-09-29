@@ -17,7 +17,7 @@ pub struct Args {
     #[arg(short, long, global = true)]
     pub port: Option<u16>,
 
-    #[arg(short, long, global = true)]
+    #[arg(long, global = true)]
     pub config: Option<String>,
 
     #[arg(short, long, global = true, action = ArgAction::HelpLong)]

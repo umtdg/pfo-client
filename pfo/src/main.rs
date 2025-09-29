@@ -4,6 +4,7 @@ mod config;
 mod fund;
 mod output;
 mod portfolio;
+mod problem_detail;
 
 use anyhow::{Context, Result};
 use clap::Parser;

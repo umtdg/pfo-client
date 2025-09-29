@@ -6,8 +6,9 @@ use uuid::Uuid;
 
 use crate::cli::SortArguments;
 use crate::config::Config;
-use crate::fund::{FundInfoSortBy, FundInfo, FundStats, FundStatsSortBy};
+use crate::fund::{FundInfo, FundInfoSortBy, FundStats, FundStatsSortBy};
 use crate::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
+use crate::problem_detail::ProblemDetail;
 
 pub struct Client {
     inner: reqwest::Client,
@@ -49,12 +50,12 @@ impl Client {
             .send()
             .await
             .context("Failed to get portfolio list")?;
-        let portfolio_list = res
-            .json()
-            .await
-            .context("Failed to parse portfolio list JSON")?;
 
-        Ok(portfolio_list)
+        if res.status().is_success() {
+            Ok(res.json().await?)
+        } else {
+            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
+        }
     }
 
     pub async fn get_portfolio(&self, id: Uuid) -> Result<Portfolio> {
@@ -64,9 +65,12 @@ impl Client {
             .send()
             .await
             .context("Failed to get portfolio")?;
-        let portfolio = res.json().await.context("Failed to parse portfolio JSON")?;
 
-        Ok(portfolio)
+        if res.status().is_success() {
+            Ok(res.json().await?)
+        } else {
+            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
+        }
     }
 
     pub async fn get_portfolio_prices(
@@ -94,23 +98,27 @@ impl Client {
 
         let res = req.send().await.context("Failed to fetch fund prices")?;
 
-        let funds = res
-            .json()
-            .await
-            .context("Failed to parse portfolio fund price distribution JSON")?;
-
-        Ok(funds)
+        if res.status().is_success() {
+            Ok(res.json().await?)
+        } else {
+            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
+        }
     }
 
     pub async fn update_portfolio(&self, id: Uuid, update: PortfolioUpdate) -> Result<()> {
         let url = format!("{}/p/{}", self.base_url(), id);
-        let _res = self
+        let res = self
             .put(url)
             .json(&update)
             .send()
             .await
             .context("Failed to update portfolio")?;
-        Ok(())
+
+        if res.status().is_success() {
+            Ok(())
+        } else {
+            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
+        }
     }
 
     pub async fn get_funds(
@@ -140,9 +148,11 @@ impl Client {
 
         let res = req.send().await.context("Failed to fetch funds")?;
 
-        let fund_list = res.json().await.context("Failed to parse fund list JSON")?;
-
-        Ok(fund_list)
+        if res.status().is_success() {
+            Ok(res.json().await?)
+        } else {
+            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
+        }
     }
 
     pub async fn get_fund_stats(
@@ -167,11 +177,10 @@ impl Client {
 
         let res = req.send().await.context("Failed to fetch fund stats")?;
 
-        let stat_list = res
-            .json()
-            .await
-            .context("Failed to parse fund stats JSON")?;
-
-        Ok(stat_list)
+        if res.status().is_success() {
+            Ok(res.json().await?)
+        } else {
+            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
+        }
     }
 }
