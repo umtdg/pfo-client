@@ -1,14 +1,11 @@
-use std::collections::HashMap;
-
 use clap::ValueEnum;
 use pfo_core::trim_string;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    cli::SortByEnum,
-    output::{OutputColumn, OutputStruct, OutputTable},
-};
+use crate::cli::SortByEnum;
+use crate::output::{OutputColumn, OutputStruct};
+use crate::{impl_output_table, impl_sort_by_enum};
 
 /// Portfolio
 #[derive(Debug, Deserialize, Serialize)]
@@ -17,52 +14,7 @@ pub struct Portfolio {
     pub name: String,
 }
 
-impl OutputTable for Portfolio {
-    type ColumnEnum = PortfolioColumn;
-    type OutputStruct = PortfolioOutput;
-
-    const COLUMN_SPACING: usize = 2;
-
-    fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool) {
-        let mut print_values: Vec<Self::OutputStruct> = vec![];
-        if headers {
-            print_values.push(Self::OutputStruct::from_headers());
-        }
-
-        let mut non_header_values = list
-            .iter()
-            .map(|item| Self::OutputStruct::from_value(item, wide))
-            .collect();
-        print_values.append(&mut non_header_values);
-
-        let mut col_widths = HashMap::with_capacity(columns.len());
-        for col in columns {
-            let max_width = print_values
-                .iter()
-                .map(|val| val.len_from_col(col))
-                .max()
-                .unwrap_or(col.max_len());
-            col_widths.insert(col.clone(), max_width);
-        }
-
-        for f in print_values {
-            for col in columns {
-                let width = col_widths.get(col).unwrap();
-                let val = f.value_from_col(col);
-
-                if col.left_align() {
-                    print!("{:<width$}", val, width = width);
-                } else {
-                    print!("{:>width$}", val, width = width);
-                }
-
-                print!("{}", " ".repeat(Self::COLUMN_SPACING));
-            }
-
-            println!();
-        }
-    }
-}
+impl_output_table!(Portfolio, PortfolioColumn, PortfolioOutput, PortfolioSortBy);
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, clap::ValueEnum)]
 pub enum PortfolioColumn {
@@ -148,16 +100,4 @@ impl ToString for PortfolioSortBy {
     }
 }
 
-impl SortByEnum for PortfolioSortBy {
-    fn get_help_string() -> String {
-        Self::value_variants()
-            .iter()
-            .map(|v| v.to_possible_value().unwrap().get_name().to_string())
-            .collect::<Vec<String>>()
-            .join(" | ")
-    }
-
-    fn value_parser(s: &str) -> Result<Self, String> {
-        Self::from_str(s, true)
-    }
-}
+impl_sort_by_enum!(PortfolioSortBy);

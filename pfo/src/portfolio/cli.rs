@@ -9,7 +9,7 @@ use crate::fund::{
     FundFilterArgs, FundInfo, FundInfoColumn, FundInfoSortBy, FundStats, FundStatsColumn,
     FundStatsSortBy,
 };
-use crate::output::{OutputArgs, OutputColumn, OutputTable};
+use crate::output::{OutputArgs, OutputTable};
 use crate::portfolio::{
     FundToBuy, FundToBuyColumn, FundToBuySortBy, Portfolio, PortfolioColumn, PortfolioFundAdd,
     PortfolioSortBy, PortfolioUpdate,
@@ -113,22 +113,10 @@ impl PortfolioCommand {
     pub async fn handle(self, client: Client) -> Result<()> {
         match self {
             PortfolioCommand::List { output } => {
-                Portfolio::print_table(
-                    &client.list_portfolios().await?,
-                    &output
-                        .output
-                        .unwrap_or(vec![PortfolioColumn::Id, PortfolioColumn::Name]),
-                    !output.no_headers,
-                    output.wide,
-                );
+                Portfolio::print_table(&client.list_portfolios().await?, output);
             }
             PortfolioCommand::Get { id, output } => {
-                Portfolio::print_table(
-                    &vec![client.get_portfolio(id).await?],
-                    &output.output.unwrap_or(PortfolioColumn::default_columns()),
-                    !output.no_headers,
-                    output.wide,
-                );
+                Portfolio::print_table(&vec![client.get_portfolio(id).await?], output);
             }
             PortfolioCommand::Prices {
                 id,
@@ -136,13 +124,9 @@ impl PortfolioCommand {
                 fund_filter,
                 output,
             } => {
-                let funds = client.get_portfolio_prices(id, budget, fund_filter).await?;
-
                 FundToBuy::print_table(
-                    &funds,
-                    &output.output.unwrap_or(FundToBuyColumn::default_columns()),
-                    !output.no_headers,
-                    output.wide,
+                    &client.get_portfolio_prices(id, budget, fund_filter).await?,
+                    output,
                 );
             }
             PortfolioCommand::Add {
@@ -163,10 +147,12 @@ impl PortfolioCommand {
                     },
                     remove_codes: HashSet::new(),
                 };
+
                 client
                     .update_portfolio(id, update)
                     .await
                     .context("Failed to add fund to portfolio")?;
+
                 println!("Successfully added fund");
             }
             PortfolioCommand::Remove {
@@ -177,6 +163,7 @@ impl PortfolioCommand {
                     add_codes: HashSet::new(),
                     remove_codes: fund_codes.into_iter().collect(),
                 };
+
                 client
                     .update_portfolio(id, update)
                     .await
@@ -185,25 +172,17 @@ impl PortfolioCommand {
                 println!("Successfully removed funds");
             }
             PortfolioCommand::Info { id, output } => {
-                let fund_infos = client.get_portfolio_fund_infos(id, output.sort).await?;
-
                 FundInfo::print_table(
-                    &fund_infos,
-                    &output.output.unwrap_or(FundInfoColumn::default_columns()),
-                    !output.no_headers,
-                    output.wide,
+                    &client.get_portfolio_fund_infos(id, &output.sort).await?,
+                    output,
                 );
             }
             PortfolioCommand::Stats { id, force, output } => {
-                let fund_stats = client
-                    .get_protfolio_fund_stats(id, output.sort, force)
-                    .await?;
-
                 FundStats::print_table(
-                    &fund_stats,
-                    &output.output.unwrap_or(FundStatsColumn::default_columns()),
-                    !output.no_headers,
-                    output.wide,
+                    &client
+                        .get_protfolio_fund_stats(id, &output.sort, force)
+                        .await?,
+                    output,
                 );
             }
         }

@@ -2,6 +2,7 @@ mod cli;
 mod client;
 mod config;
 mod fund;
+mod macros;
 mod output;
 mod portfolio;
 mod problem_detail;

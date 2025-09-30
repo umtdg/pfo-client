@@ -8,7 +8,7 @@ use crate::client::Client;
 use crate::fund::{
     FundInfo, FundInfoColumn, FundInfoSortBy, FundStats, FundStatsColumn, FundStatsSortBy,
 };
-use crate::output::{OutputArgs, OutputColumn, OutputTable};
+use crate::output::{OutputArgs, OutputTable};
 
 #[derive(Args, Serialize)]
 pub struct FundFilterArgs {
@@ -54,22 +54,17 @@ impl FundCommand {
                 fund_filter,
                 output,
             } => {
-                let fund_infos = client.get_funds(fund_filter, output.sort).await?;
-                let columns = output.output.unwrap_or(FundInfoColumn::default_columns());
-                let headers = !output.no_headers;
-
-                FundInfo::print_table(&fund_infos, &columns, headers, output.wide);
+                FundInfo::print_table(&client.get_funds(fund_filter, &output.sort).await?, output);
             }
             FundCommand::Stats {
                 codes,
                 force,
                 output,
             } => {
-                let fund_stats = client.get_fund_stats(codes, force, output.sort).await?;
-                let columns = output.output.unwrap_or(FundStatsColumn::default_columns());
-                let headers = !output.no_headers;
-
-                FundStats::print_table(&fund_stats, &columns, headers, output.wide);
+                FundStats::print_table(
+                    &client.get_fund_stats(codes, force, &output.sort).await?,
+                    output,
+                );
             }
         }
 

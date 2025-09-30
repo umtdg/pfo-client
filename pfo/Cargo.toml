@@ -12,8 +12,8 @@ reqwest = { version = "0.12", default-features = false, features = ["json"] }
 tokio = { version = "1.46", features = ["full"] }
 clap = { version = "4.5", features = ["derive"] }
 uuid = { version = "1.17", features = ["v4", "serde"] }
-serde = { version = "1.0", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0", default-features = false }
 
 anyhow = { workspace = true }
 chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

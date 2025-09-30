@@ -126,7 +126,7 @@ impl Client {
     pub async fn get_portfolio_fund_infos(
         &self,
         id: Uuid,
-        sort: Option<SortArguments<FundInfoSortBy>>,
+        sort: &Option<SortArguments<FundInfoSortBy>>,
     ) -> Result<Vec<FundInfo>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(2);
         query_push_sort(&mut query, sort);
@@ -138,7 +138,7 @@ impl Client {
     pub async fn get_protfolio_fund_stats(
         &self,
         id: Uuid,
-        sort: Option<SortArguments<FundStatsSortBy>>,
+        sort: &Option<SortArguments<FundStatsSortBy>>,
         force: bool,
     ) -> Result<Vec<FundStats>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(3);
@@ -157,7 +157,7 @@ impl Client {
     pub async fn get_funds(
         &self,
         fund_filter: FundFilterArgs,
-        sort: Option<SortArguments<FundInfoSortBy>>,
+        sort: &Option<SortArguments<FundInfoSortBy>>,
     ) -> Result<Vec<FundInfo>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(5);
         query_push_sort(&mut query, sort);
@@ -171,7 +171,7 @@ impl Client {
         &self,
         codes: Vec<String>,
         force: bool,
-        sort: Option<SortArguments<FundStatsSortBy>>,
+        sort: &Option<SortArguments<FundStatsSortBy>>,
     ) -> Result<Vec<FundStats>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(4);
         query_push_sort(&mut query, sort);
@@ -197,7 +197,7 @@ fn query_push_date<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, date: O
 
 fn query_push_sort<'a, T: SortByEnum>(
     query: &mut Vec<(&'a str, String)>,
-    sort: Option<SortArguments<T>>,
+    sort: &Option<SortArguments<T>>,
 ) {
     if let Some(sort) = sort {
         query.push(("sortBy", sort.by.to_string()));

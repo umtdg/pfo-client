@@ -1,14 +1,24 @@
+use std::collections::HashMap;
+
 use clap::{Args, ValueEnum};
 
-use crate::cli::{SortByEnum, SortArguments};
+use crate::cli::{SortArguments, SortByEnum};
 
 pub trait OutputTable: Sized {
-    type ColumnEnum: OutputColumn;
+    type ColumnEnum: OutputColumn + Send + Sync + 'static;
     type OutputStruct: OutputStruct;
+    type SortByEnum: SortByEnum + Send + Sync + 'static;
 
     const COLUMN_SPACING: usize;
 
-    fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool);
+    fn to_value_list(list: &Vec<Self>, headers: bool, wide: bool) -> Vec<Self::OutputStruct>;
+
+    fn calculate_col_widths(
+        print_values: &Vec<Self::OutputStruct>,
+        columns: &Vec<Self::ColumnEnum>,
+    ) -> HashMap<Self::ColumnEnum, usize>;
+
+    fn print_table(list: &Vec<Self>, output: OutputArgs<Self::ColumnEnum, Self::SortByEnum>);
 }
 
 pub trait OutputColumn: Sized + ValueEnum {
@@ -36,19 +46,19 @@ pub trait OutputStruct {
 
 #[derive(Args)]
 pub struct OutputArgs<
-    Col: Clone + OutputColumn + Send + Sync + 'static,
-    By: SortByEnum + Send + Sync + 'static,
+    Column: Clone + OutputColumn + Send + Sync + 'static,
+    SortBy: SortByEnum + Send + Sync + 'static,
 > {
     #[arg(
             short,
             long,
-            value_parser = SortArguments::<By>::value_parser,
-            help = SortArguments::<By>::get_help()
+            value_parser = SortArguments::<SortBy>::value_parser,
+            help = SortArguments::<SortBy>::get_help()
         )]
-    pub sort: Option<SortArguments<By>>,
+    pub sort: Option<SortArguments<SortBy>>,
 
-    #[arg(short, long, value_delimiter = ',')]
-    pub output: Option<Vec<Col>>,
+    #[arg(short = 'o', long = "output", value_delimiter = ',')]
+    pub columns: Option<Vec<Column>>,
 
     #[arg(long)]
     pub no_headers: bool,

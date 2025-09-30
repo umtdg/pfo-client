@@ -1,14 +1,11 @@
-use std::collections::HashMap;
-
 use chrono::NaiveDate;
 use clap::ValueEnum;
 use pfo_core::trim_string;
 use serde::Deserialize;
 
-use crate::{
-    cli::SortByEnum,
-    output::{OutputColumn, OutputStruct, OutputTable},
-};
+use crate::cli::SortByEnum;
+use crate::output::{OutputColumn, OutputStruct};
+use crate::{impl_output_table, impl_sort_by_enum};
 
 #[derive(Debug, Deserialize)]
 pub struct FundStats {
@@ -26,52 +23,7 @@ pub struct FundStats {
     pub five_yearly_return: Option<f32>,
 }
 
-impl OutputTable for FundStats {
-    type ColumnEnum = FundStatsColumn;
-    type OutputStruct = FundStatsOutput;
-
-    const COLUMN_SPACING: usize = 2;
-
-    fn print_table(list: &Vec<Self>, columns: &Vec<Self::ColumnEnum>, headers: bool, wide: bool) {
-        let mut print_values: Vec<Self::OutputStruct> = vec![];
-        if headers {
-            print_values.push(Self::OutputStruct::from_headers());
-        }
-
-        let mut non_header_values = list
-            .iter()
-            .map(|item| Self::OutputStruct::from_value(item, wide))
-            .collect();
-        print_values.append(&mut non_header_values);
-
-        let mut col_widths = HashMap::with_capacity(columns.len());
-        for col in columns {
-            let max_width = print_values
-                .iter()
-                .map(|val| val.len_from_col(col))
-                .max()
-                .unwrap_or(col.max_len());
-            col_widths.insert(col.clone(), max_width);
-        }
-
-        for f in print_values {
-            for col in columns {
-                let width = col_widths.get(col).unwrap();
-                let val = f.value_from_col(col);
-
-                if col.left_align() {
-                    print!("{:<width$}", val, width = width);
-                } else {
-                    print!("{:>width$}", val, width = width);
-                }
-
-                print!("{}", " ".repeat(Self::COLUMN_SPACING));
-            }
-
-            println!();
-        }
-    }
-}
+impl_output_table!(FundStats, FundStatsColumn, FundStatsOutput, FundStatsSortBy);
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, clap::ValueEnum)]
 pub enum FundStatsColumn {
@@ -92,52 +44,52 @@ pub enum FundStatsColumn {
 impl OutputColumn for FundStatsColumn {
     fn max_len(&self) -> usize {
         match self {
-            FundStatsColumn::Code => 3,
-            FundStatsColumn::Title => 25,
-            FundStatsColumn::LastPrice => 15,
-            FundStatsColumn::UpdatedAt => 10,
-            FundStatsColumn::TotalValue => 30,
-            FundStatsColumn::Daily => 16,
-            FundStatsColumn::Monthly => 16,
-            FundStatsColumn::ThreeMonthly => 16,
-            FundStatsColumn::SixMonthly => 16,
-            FundStatsColumn::Yearly => 16,
-            FundStatsColumn::ThreeYearly => 16,
-            FundStatsColumn::FiveYearly => 16,
+            Self::Code => 3,
+            Self::Title => 25,
+            Self::LastPrice => 15,
+            Self::UpdatedAt => 10,
+            Self::TotalValue => 30,
+            Self::Daily => 16,
+            Self::Monthly => 16,
+            Self::ThreeMonthly => 16,
+            Self::SixMonthly => 16,
+            Self::Yearly => 16,
+            Self::ThreeYearly => 16,
+            Self::FiveYearly => 16,
         }
     }
 
     fn name_str(&self) -> &str {
         match self {
-            FundStatsColumn::Code => "Code",
-            FundStatsColumn::Title => "Title",
-            FundStatsColumn::UpdatedAt => "Updated At",
-            FundStatsColumn::LastPrice => "Last Price",
-            FundStatsColumn::TotalValue => "Total Value",
-            FundStatsColumn::Daily => "Daily",
-            FundStatsColumn::Monthly => "Monthly",
-            FundStatsColumn::ThreeMonthly => "Three Monthly",
-            FundStatsColumn::SixMonthly => "Six Monthly",
-            FundStatsColumn::Yearly => "Yearly",
-            FundStatsColumn::ThreeYearly => "Three Yearly",
-            FundStatsColumn::FiveYearly => "Five Yearly",
+            Self::Code => "Code",
+            Self::Title => "Title",
+            Self::UpdatedAt => "Updated At",
+            Self::LastPrice => "Last Price",
+            Self::TotalValue => "Total Value",
+            Self::Daily => "Daily",
+            Self::Monthly => "Monthly",
+            Self::ThreeMonthly => "Three Monthly",
+            Self::SixMonthly => "Six Monthly",
+            Self::Yearly => "Yearly",
+            Self::ThreeYearly => "Three Yearly",
+            Self::FiveYearly => "Five Yearly",
         }
     }
 
     fn left_align(&self) -> bool {
         match self {
-            FundStatsColumn::Code => true,
-            FundStatsColumn::Title => true,
-            FundStatsColumn::UpdatedAt => true,
-            FundStatsColumn::LastPrice => false,
-            FundStatsColumn::TotalValue => false,
-            FundStatsColumn::Daily => true,
-            FundStatsColumn::Monthly => true,
-            FundStatsColumn::ThreeMonthly => true,
-            FundStatsColumn::SixMonthly => true,
-            FundStatsColumn::Yearly => true,
-            FundStatsColumn::ThreeYearly => true,
-            FundStatsColumn::FiveYearly => true,
+            Self::Code => true,
+            Self::Title => true,
+            Self::UpdatedAt => true,
+            Self::LastPrice => false,
+            Self::TotalValue => false,
+            Self::Daily => true,
+            Self::Monthly => true,
+            Self::ThreeMonthly => true,
+            Self::SixMonthly => true,
+            Self::Yearly => true,
+            Self::ThreeYearly => true,
+            Self::FiveYearly => true,
         }
     }
 
@@ -208,18 +160,18 @@ impl OutputStruct for FundStatsOutput {
 
     fn value_from_col(&self, col: &Self::ColumnEnum) -> &str {
         match col {
-            FundStatsColumn::Code => &self.code,
-            FundStatsColumn::Title => &self.title,
-            FundStatsColumn::UpdatedAt => &self.updated_at,
-            FundStatsColumn::LastPrice => &self.last_price,
-            FundStatsColumn::TotalValue => &self.total_value,
-            FundStatsColumn::Daily => &self.daily_return,
-            FundStatsColumn::Monthly => &self.monthly_return,
-            FundStatsColumn::ThreeMonthly => &self.three_monthly_return,
-            FundStatsColumn::SixMonthly => &self.six_monthly_return,
-            FundStatsColumn::Yearly => &self.yearly_return,
-            FundStatsColumn::ThreeYearly => &self.three_yearly_return,
-            FundStatsColumn::FiveYearly => &self.five_yearly_return,
+            Self::ColumnEnum::Code => &self.code,
+            Self::ColumnEnum::Title => &self.title,
+            Self::ColumnEnum::UpdatedAt => &self.updated_at,
+            Self::ColumnEnum::LastPrice => &self.last_price,
+            Self::ColumnEnum::TotalValue => &self.total_value,
+            Self::ColumnEnum::Daily => &self.daily_return,
+            Self::ColumnEnum::Monthly => &self.monthly_return,
+            Self::ColumnEnum::ThreeMonthly => &self.three_monthly_return,
+            Self::ColumnEnum::SixMonthly => &self.six_monthly_return,
+            Self::ColumnEnum::Yearly => &self.yearly_return,
+            Self::ColumnEnum::ThreeYearly => &self.three_yearly_return,
+            Self::ColumnEnum::FiveYearly => &self.five_yearly_return,
         }
     }
 
@@ -246,32 +198,20 @@ pub enum FundStatsSortBy {
 impl ToString for FundStatsSortBy {
     fn to_string(&self) -> String {
         match self {
-            FundStatsSortBy::Code => "code",
-            FundStatsSortBy::Title => "title",
-            FundStatsSortBy::LastPrice => "lastPrice",
-            FundStatsSortBy::TotalValue => "totalValue",
-            FundStatsSortBy::DailyReturn => "dailyReturn",
-            FundStatsSortBy::MonthlyReturn => "monthlyReturn",
-            FundStatsSortBy::ThreeMonthlyReturn => "threeMonthlyReturn",
-            FundStatsSortBy::SixMonthlyReturn => "sixMonthlyReturn",
-            FundStatsSortBy::YearlyReturn => "yearlyReturn",
-            FundStatsSortBy::ThreeYearlyReturn => "threeYearlyReturn",
-            FundStatsSortBy::FiveYearlyReturn => "fiveYearlyReturn",
+            Self::Code => "code",
+            Self::Title => "title",
+            Self::LastPrice => "lastPrice",
+            Self::TotalValue => "totalValue",
+            Self::DailyReturn => "dailyReturn",
+            Self::MonthlyReturn => "monthlyReturn",
+            Self::ThreeMonthlyReturn => "threeMonthlyReturn",
+            Self::SixMonthlyReturn => "sixMonthlyReturn",
+            Self::YearlyReturn => "yearlyReturn",
+            Self::ThreeYearlyReturn => "threeYearlyReturn",
+            Self::FiveYearlyReturn => "fiveYearlyReturn",
         }
         .into()
     }
 }
 
-impl SortByEnum for FundStatsSortBy {
-    fn get_help_string() -> String {
-        Self::value_variants()
-            .iter()
-            .map(|v| v.to_possible_value().unwrap().get_name().to_string())
-            .collect::<Vec<String>>()
-            .join(" | ")
-    }
-
-    fn value_parser(s: &str) -> Result<Self, String> {
-        Self::from_str(s, true)
-    }
-}
+impl_sort_by_enum!(FundStatsSortBy);
