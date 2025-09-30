@@ -6,7 +6,7 @@ use pfo_core::trim_string;
 use serde::Deserialize;
 
 use crate::{
-    cli::SortArgumentEnum,
+    cli::SortByEnum,
     output::{OutputColumn, OutputStruct, OutputTable},
 };
 
@@ -140,6 +140,17 @@ impl OutputColumn for FundStatsColumn {
             FundStatsColumn::FiveYearly => true,
         }
     }
+
+    fn default_columns() -> Vec<Self> {
+        vec![
+            Self::Code,
+            Self::LastPrice,
+            Self::TotalValue,
+            Self::Yearly,
+            Self::ThreeYearly,
+            Self::FiveYearly,
+        ]
+    }
 }
 
 pub struct FundStatsOutput {
@@ -251,7 +262,7 @@ impl ToString for FundStatsSortBy {
     }
 }
 
-impl SortArgumentEnum for FundStatsSortBy {
+impl SortByEnum for FundStatsSortBy {
     fn get_help_string() -> String {
         Self::value_variants()
             .iter()

@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 
+use clap::ValueEnum;
 use pfo_core::trim_string;
 use serde::{Deserialize, Serialize};
 
-use crate::output::{OutputColumn, OutputStruct, OutputTable};
+use crate::{
+    cli::SortByEnum,
+    output::{OutputColumn, OutputStruct, OutputTable},
+};
 
 /// FundToBuy
 #[derive(Debug, Deserialize, Serialize)]
@@ -101,6 +105,10 @@ impl OutputColumn for FundToBuyColumn {
             FundToBuyColumn::Weight => false,
         }
     }
+
+    fn default_columns() -> Vec<Self> {
+        vec![Self::Title, Self::Code, Self::Amount, Self::Price]
+    }
 }
 
 pub struct FundToBuyOutput {
@@ -137,15 +145,51 @@ impl OutputStruct for FundToBuyOutput {
 
     fn value_from_col(&self, col: &Self::ColumnEnum) -> &str {
         match col {
-            FundToBuyColumn::Code => &self.code,
-            FundToBuyColumn::Title => &self.title,
-            FundToBuyColumn::Price => &self.price,
-            FundToBuyColumn::Amount => &self.amount,
-            FundToBuyColumn::Weight => &self.weight,
+            Self::ColumnEnum::Code => &self.code,
+            Self::ColumnEnum::Title => &self.title,
+            Self::ColumnEnum::Price => &self.price,
+            Self::ColumnEnum::Amount => &self.amount,
+            Self::ColumnEnum::Weight => &self.weight,
         }
     }
 
     fn len_from_col(&self, col: &Self::ColumnEnum) -> usize {
         self.value_from_col(col).len()
+    }
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum FundToBuySortBy {
+    Code,
+    Title,
+    Price,
+    Amount,
+    Weight,
+}
+
+impl ToString for FundToBuySortBy {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Code => "code",
+            Self::Title => "title",
+            Self::Price => "price",
+            Self::Amount => "amount",
+            Self::Weight => "weight",
+        }
+        .into()
+    }
+}
+
+impl SortByEnum for FundToBuySortBy {
+    fn get_help_string() -> String {
+        Self::value_variants()
+            .iter()
+            .map(|v| v.to_possible_value().unwrap().get_name().to_string())
+            .collect::<Vec<String>>()
+            .join(" | ")
+    }
+
+    fn value_parser(s: &str) -> Result<Self, String> {
+        Self::from_str(s, true)
     }
 }

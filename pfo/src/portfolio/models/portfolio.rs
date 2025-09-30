@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 
+use clap::ValueEnum;
 use pfo_core::trim_string;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::output::{OutputColumn, OutputStruct, OutputTable};
+use crate::{
+    cli::SortByEnum,
+    output::{OutputColumn, OutputStruct, OutputTable},
+};
 
 /// Portfolio
 #[derive(Debug, Deserialize, Serialize)]
@@ -87,6 +91,10 @@ impl OutputColumn for PortfolioColumn {
             PortfolioColumn::Name => true,
         }
     }
+
+    fn default_columns() -> Vec<Self> {
+        vec![PortfolioColumn::Id, PortfolioColumn::Name]
+    }
 }
 
 pub struct PortfolioOutput {
@@ -121,5 +129,35 @@ impl OutputStruct for PortfolioOutput {
 
     fn len_from_col(&self, col: &Self::ColumnEnum) -> usize {
         self.value_from_col(col).len()
+    }
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum PortfolioSortBy {
+    Id,
+    Name,
+}
+
+impl ToString for PortfolioSortBy {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Id => "id",
+            Self::Name => "name",
+        }
+        .into()
+    }
+}
+
+impl SortByEnum for PortfolioSortBy {
+    fn get_help_string() -> String {
+        Self::value_variants()
+            .iter()
+            .map(|v| v.to_possible_value().unwrap().get_name().to_string())
+            .collect::<Vec<String>>()
+            .join(" | ")
+    }
+
+    fn value_parser(s: &str) -> Result<Self, String> {
+        Self::from_str(s, true)
     }
 }

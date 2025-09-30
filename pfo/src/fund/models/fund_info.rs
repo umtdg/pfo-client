@@ -5,7 +5,7 @@ use clap::ValueEnum;
 use pfo_core::trim_string;
 use serde::Deserialize;
 
-use crate::cli::SortArgumentEnum;
+use crate::cli::SortByEnum;
 use crate::output::{OutputColumn, OutputStruct, OutputTable};
 
 /// Fund Information
@@ -79,35 +79,45 @@ pub enum FundInfoColumn {
 impl OutputColumn for FundInfoColumn {
     fn max_len(&self) -> usize {
         match self {
-            FundInfoColumn::Code => 3,
-            FundInfoColumn::Title => 25,
-            FundInfoColumn::Provider => 25,
-            FundInfoColumn::Date => 10,
-            FundInfoColumn::Price => 15,
-            FundInfoColumn::TotalValue => 30,
+            Self::Code => 3,
+            Self::Title => 25,
+            Self::Provider => 25,
+            Self::Date => 10,
+            Self::Price => 15,
+            Self::TotalValue => 30,
         }
     }
 
     fn name_str(&self) -> &str {
         match self {
-            FundInfoColumn::Code => "Code",
-            FundInfoColumn::Title => "Title",
-            FundInfoColumn::Provider => "Provider",
-            FundInfoColumn::Date => "Date",
-            FundInfoColumn::Price => "Price",
-            FundInfoColumn::TotalValue => "TotalValue",
+            Self::Code => "Code",
+            Self::Title => "Title",
+            Self::Provider => "Provider",
+            Self::Date => "Date",
+            Self::Price => "Price",
+            Self::TotalValue => "TotalValue",
         }
     }
 
     fn left_align(&self) -> bool {
         match self {
-            FundInfoColumn::Code => true,
-            FundInfoColumn::Title => true,
-            FundInfoColumn::Provider => true,
-            FundInfoColumn::Date => true,
-            FundInfoColumn::Price => false,
-            FundInfoColumn::TotalValue => false,
+            Self::Code => true,
+            Self::Title => true,
+            Self::Provider => true,
+            Self::Date => true,
+            Self::Price => false,
+            Self::TotalValue => false,
         }
+    }
+
+    fn default_columns() -> Vec<Self> {
+        vec![
+            Self::Code,
+            Self::Title,
+            Self::Date,
+            Self::Price,
+            Self::TotalValue,
+        ]
     }
 }
 
@@ -174,17 +184,17 @@ pub enum FundInfoSortBy {
 impl ToString for FundInfoSortBy {
     fn to_string(&self) -> String {
         match self {
-            FundInfoSortBy::Code => "code",
-            FundInfoSortBy::Title => "title",
-            FundInfoSortBy::Provider => "provider",
-            FundInfoSortBy::Price => "price",
-            FundInfoSortBy::TotalValue => "totalValue",
+            Self::Code => "code",
+            Self::Title => "title",
+            Self::Provider => "provider",
+            Self::Price => "price",
+            Self::TotalValue => "totalValue",
         }
         .into()
     }
 }
 
-impl SortArgumentEnum for FundInfoSortBy {
+impl SortByEnum for FundInfoSortBy {
     fn get_help_string() -> String {
         Self::value_variants()
             .iter()

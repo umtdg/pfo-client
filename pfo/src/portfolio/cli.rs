@@ -1,29 +1,26 @@
 use std::collections::HashSet;
 
 use anyhow::{Context, Result};
-use chrono::NaiveDate;
 use clap::Subcommand;
-use pfo_core::{parse_naive_date, turkish_collate};
 use uuid::Uuid;
 
 use crate::client::Client;
-use crate::output::OutputTable;
+use crate::fund::{
+    FundFilterArgs, FundInfo, FundInfoColumn, FundInfoSortBy, FundStats, FundStatsColumn,
+    FundStatsSortBy,
+};
+use crate::output::{OutputArgs, OutputColumn, OutputTable};
 use crate::portfolio::{
-    FundToBuy, FundToBuyColumn, Portfolio, PortfolioColumn, PortfolioFundAdd, PortfolioUpdate,
+    FundToBuy, FundToBuyColumn, FundToBuySortBy, Portfolio, PortfolioColumn, PortfolioFundAdd,
+    PortfolioSortBy, PortfolioUpdate,
 };
 
 #[derive(Subcommand)]
 pub enum PortfolioCommand {
     #[command(name = "list", visible_alias = "ls", about = "List all portfolios")]
     List {
-        #[arg(short, long, value_delimiter = ',')]
-        output: Option<Vec<PortfolioColumn>>,
-
-        #[arg(long)]
-        no_headers: bool,
-
-        #[arg(short, long)]
-        wide: bool,
+        #[command(flatten)]
+        output: OutputArgs<PortfolioColumn, PortfolioSortBy>,
     },
 
     #[command(name = "get", visible_alias = "g", about = "Get single portfolio")]
@@ -31,14 +28,8 @@ pub enum PortfolioCommand {
         #[arg(value_name = "PORTFOLIO_ID")]
         id: Uuid,
 
-        #[arg(short, long, value_delimiter = ',')]
-        output: Option<Vec<PortfolioColumn>>,
-
-        #[arg(long)]
-        no_headers: bool,
-
-        #[arg(short, long)]
-        wide: bool,
+        #[command(flatten)]
+        output: OutputArgs<PortfolioColumn, PortfolioSortBy>,
     },
 
     #[command(
@@ -53,23 +44,40 @@ pub enum PortfolioCommand {
         #[arg(short, long)]
         budget: f32,
 
-        #[arg(short, long, value_parser = parse_naive_date)]
-        date: Option<NaiveDate>,
+        #[command(flatten)]
+        fund_filter: FundFilterArgs,
 
-        #[arg(short, long, value_parser = parse_naive_date)]
-        from: Option<NaiveDate>,
+        #[command(flatten)]
+        output: OutputArgs<FundToBuyColumn, FundToBuySortBy>,
+    },
 
-        #[arg(short, long, value_delimiter = ',')]
-        codes: Vec<String>,
+    #[command(
+        name = "info",
+        visible_alias = "i",
+        about = "Get fund information for funds in given portfolio"
+    )]
+    Info {
+        #[arg(value_name = "PORTFOLIO_ID")]
+        id: Uuid,
 
-        #[arg(short, long, value_delimiter = ',')]
-        output: Option<Vec<FundToBuyColumn>>,
+        #[command(flatten)]
+        output: OutputArgs<FundInfoColumn, FundInfoSortBy>,
+    },
 
-        #[arg(long)]
-        no_headers: bool,
+    #[command(
+        name = "stats",
+        visible_alias = "s",
+        about = "Get fund stats for funds in given portfolio"
+    )]
+    Stats {
+        #[arg(value_name = "PORTFOLIO_ID")]
+        id: Uuid,
 
         #[arg(short, long)]
-        wide: bool,
+        force: bool,
+
+        #[command(flatten)]
+        output: OutputArgs<FundStatsColumn, FundStatsSortBy>,
     },
 
     #[command(name = "add", visible_alias = "a", about = "Add funds to a portfolio")]
@@ -104,54 +112,42 @@ pub enum PortfolioCommand {
 impl PortfolioCommand {
     pub async fn handle(self, client: Client) -> Result<()> {
         match self {
-            PortfolioCommand::List {
-                output,
-                no_headers,
-                wide,
-            } => {
-                let portfolios = client.list_portfolios().await?;
-                let columns = output.unwrap_or(vec![PortfolioColumn::Id, PortfolioColumn::Name]);
-                let headers = !no_headers;
-                Portfolio::print_table(&portfolios, &columns, headers, wide);
+            PortfolioCommand::List { output } => {
+                Portfolio::print_table(
+                    &client.list_portfolios().await?,
+                    &output
+                        .output
+                        .unwrap_or(vec![PortfolioColumn::Id, PortfolioColumn::Name]),
+                    !output.no_headers,
+                    output.wide,
+                );
             }
-            PortfolioCommand::Get {
-                id,
-                output,
-                no_headers,
-                wide,
-            } => {
-                let portfolios = vec![client.get_portfolio(id).await?];
-                let columns = output.unwrap_or(vec![PortfolioColumn::Id, PortfolioColumn::Name]);
-                let headers = !no_headers;
-                Portfolio::print_table(&portfolios, &columns, headers, wide);
+            PortfolioCommand::Get { id, output } => {
+                Portfolio::print_table(
+                    &vec![client.get_portfolio(id).await?],
+                    &output.output.unwrap_or(PortfolioColumn::default_columns()),
+                    !output.no_headers,
+                    output.wide,
+                );
             }
             PortfolioCommand::Prices {
                 id,
                 budget,
-                date,
-                from,
-                codes,
+                fund_filter,
                 output,
-                no_headers,
-                wide,
             } => {
-                let mut funds = client
-                    .get_portfolio_prices(id, budget, date, from, codes)
-                    .await?;
-                funds.sort_by(|lhs, rhs| turkish_collate(&lhs.title, &rhs.title));
+                let funds = client.get_portfolio_prices(id, budget, fund_filter).await?;
 
-                let columns = output.unwrap_or(vec![
-                    FundToBuyColumn::Title,
-                    FundToBuyColumn::Code,
-                    FundToBuyColumn::Amount,
-                    FundToBuyColumn::Price,
-                ]);
-                let headers = !no_headers;
-                FundToBuy::print_table(&funds, &columns, headers, wide);
+                FundToBuy::print_table(
+                    &funds,
+                    &output.output.unwrap_or(FundToBuyColumn::default_columns()),
+                    !output.no_headers,
+                    output.wide,
+                );
             }
             PortfolioCommand::Add {
                 id,
-                code: fund_code,
+                code,
                 weight,
                 min_amount,
             } => {
@@ -159,7 +155,7 @@ impl PortfolioCommand {
                     add_codes: {
                         let mut set = HashSet::new();
                         set.insert(PortfolioFundAdd {
-                            fund_code,
+                            fund_code: code,
                             weight,
                             min_amount,
                         });
@@ -185,7 +181,30 @@ impl PortfolioCommand {
                     .update_portfolio(id, update)
                     .await
                     .context("Failed to remove funds from portfolio")?;
+
                 println!("Successfully removed funds");
+            }
+            PortfolioCommand::Info { id, output } => {
+                let fund_infos = client.get_portfolio_fund_infos(id, output.sort).await?;
+
+                FundInfo::print_table(
+                    &fund_infos,
+                    &output.output.unwrap_or(FundInfoColumn::default_columns()),
+                    !output.no_headers,
+                    output.wide,
+                );
+            }
+            PortfolioCommand::Stats { id, force, output } => {
+                let fund_stats = client
+                    .get_protfolio_fund_stats(id, output.sort, force)
+                    .await?;
+
+                FundStats::print_table(
+                    &fund_stats,
+                    &output.output.unwrap_or(FundStatsColumn::default_columns()),
+                    !output.no_headers,
+                    output.wide,
+                );
             }
         }
 

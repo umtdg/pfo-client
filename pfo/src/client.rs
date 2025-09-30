@@ -2,11 +2,14 @@ use std::ops::{Deref, DerefMut};
 
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
+use reqwest::IntoUrl;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
-use crate::cli::SortArguments;
+use crate::cli::{SortArguments, SortByEnum};
 use crate::config::Config;
-use crate::fund::{FundInfo, FundInfoSortBy, FundStats, FundStatsSortBy};
+use crate::fund::{FundFilterArgs, FundInfo, FundInfoSortBy, FundStats, FundStatsSortBy};
 use crate::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 use crate::problem_detail::ProblemDetail;
 
@@ -39,148 +42,177 @@ impl Client {
         }
     }
 
-    pub fn base_url(&self) -> String {
-        format!("http://{}:{}", self.host, self.port)
+    fn endpoint_url<T: ToString>(&self, endpoint: T) -> String {
+        format!("http://{}:{}{}", self.host, self.port, endpoint.to_string())
+    }
+
+    fn portfolio_endpoint_url<T: ToString>(&self, endpoint: T, id: Uuid) -> String {
+        format!(
+            "http://{}:{}/p/{}{}",
+            self.host,
+            self.port,
+            id,
+            endpoint.to_string()
+        )
+    }
+
+    pub async fn get_with_problem_detail<SuccessDto, Url, Query>(
+        &self,
+        url: Url,
+        query: Query,
+    ) -> Result<SuccessDto>
+    where
+        SuccessDto: DeserializeOwned,
+        Url: IntoUrl,
+        Query: Serialize,
+    {
+        let req = self.get(url).query(&query);
+
+        let res = req.send().await.context("GET failed")?;
+
+        if res.status().is_success() {
+            Ok(res.json().await?)
+        } else {
+            anyhow::bail!(format!("{}", res.json::<ProblemDetail>().await?))
+        }
+    }
+
+    pub async fn put_with_problem_detail<SuccessDto, Url, Query, BodyDto>(
+        &self,
+        url: Url,
+        query: Query,
+        body: &BodyDto,
+    ) -> Result<SuccessDto>
+    where
+        SuccessDto: DeserializeOwned,
+        Url: IntoUrl,
+        Query: Serialize,
+        BodyDto: Serialize,
+    {
+        let req = self.get(url).query(&query).json(body);
+
+        let res = req.send().await.context("PUT failed")?;
+
+        if res.status().is_success() {
+            Ok(res.json().await?)
+        } else {
+            anyhow::bail!(format!("{}", res.json::<ProblemDetail>().await?))
+        }
     }
 
     pub async fn list_portfolios(&self) -> Result<Vec<Portfolio>> {
-        let url = format!("{}/p", self.base_url());
-        let res = self
-            .get(url)
-            .send()
+        self.get_with_problem_detail(self.endpoint_url("/p"), ())
             .await
-            .context("Failed to get portfolio list")?;
-
-        if res.status().is_success() {
-            Ok(res.json().await?)
-        } else {
-            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
-        }
     }
 
     pub async fn get_portfolio(&self, id: Uuid) -> Result<Portfolio> {
-        let url = format!("{}/p/{}", self.base_url(), id);
-        let res = self
-            .get(url)
-            .send()
+        self.get_with_problem_detail(self.portfolio_endpoint_url("", id), ())
             .await
-            .context("Failed to get portfolio")?;
-
-        if res.status().is_success() {
-            Ok(res.json().await?)
-        } else {
-            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
-        }
     }
 
     pub async fn get_portfolio_prices(
         &self,
         id: Uuid,
         budget: f32,
-        date: Option<NaiveDate>,
-        from: Option<NaiveDate>,
-        codes: Vec<String>,
+        fund_filter: FundFilterArgs,
     ) -> Result<Vec<FundToBuy>> {
-        let url = format!("{}/p/{}/prices", self.base_url(), id);
-        let mut req = self.get(url).query(&[("budget", budget)]);
+        let mut query: Vec<(&str, String)> = vec![("budget", budget.to_string())];
+        query_push_fund_filter(&mut query, fund_filter);
 
-        if let Some(date) = date {
-            req = req.query(&[("date", &format!("{}", date.format("%m.%d.%Y")))]);
-        }
+        self.get_with_problem_detail(self.portfolio_endpoint_url("/prices", id), query)
+            .await
+    }
 
-        if let Some(from) = from {
-            req = req.query(&[("fetchFrom", &format!("{}", from.format("%m.%d.%Y")))]);
-        }
+    pub async fn get_portfolio_fund_infos(
+        &self,
+        id: Uuid,
+        sort: Option<SortArguments<FundInfoSortBy>>,
+    ) -> Result<Vec<FundInfo>> {
+        let mut query: Vec<(&str, String)> = Vec::with_capacity(2);
+        query_push_sort(&mut query, sort);
 
-        if !codes.is_empty() {
-            req = req.query(&[("codes", codes.join(","))]);
-        }
+        self.get_with_problem_detail(self.portfolio_endpoint_url("/info", id), query)
+            .await
+    }
 
-        let res = req.send().await.context("Failed to fetch fund prices")?;
+    pub async fn get_protfolio_fund_stats(
+        &self,
+        id: Uuid,
+        sort: Option<SortArguments<FundStatsSortBy>>,
+        force: bool,
+    ) -> Result<Vec<FundStats>> {
+        let mut query: Vec<(&str, String)> = Vec::with_capacity(3);
+        query_push_sort(&mut query, sort);
+        query_push_bool(&mut query, "force", force);
 
-        if res.status().is_success() {
-            Ok(res.json().await?)
-        } else {
-            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
-        }
+        self.get_with_problem_detail(self.portfolio_endpoint_url("/stats", id), query)
+            .await
     }
 
     pub async fn update_portfolio(&self, id: Uuid, update: PortfolioUpdate) -> Result<()> {
-        let url = format!("{}/p/{}", self.base_url(), id);
-        let res = self
-            .put(url)
-            .json(&update)
-            .send()
+        self.put_with_problem_detail(self.portfolio_endpoint_url("", id), (), &update)
             .await
-            .context("Failed to update portfolio")?;
-
-        if res.status().is_success() {
-            Ok(())
-        } else {
-            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
-        }
     }
 
     pub async fn get_funds(
         &self,
-        codes: Vec<String>,
-        date: Option<NaiveDate>,
-        from: Option<NaiveDate>,
-        sort: SortArguments<FundInfoSortBy>,
+        fund_filter: FundFilterArgs,
+        sort: Option<SortArguments<FundInfoSortBy>>,
     ) -> Result<Vec<FundInfo>> {
-        let url = format!("{}/f", self.base_url());
-        let mut req = self.get(url).query(&[
-            ("sortBy", sort.by.to_string()),
-            ("sortDirection", sort.dir.to_string()),
-        ]);
+        let mut query: Vec<(&str, String)> = Vec::with_capacity(5);
+        query_push_sort(&mut query, sort);
+        query_push_fund_filter(&mut query, fund_filter);
 
-        if !codes.is_empty() {
-            req = req.query(&[("codes", codes.join(","))]);
-        }
-
-        if let Some(date) = date {
-            req = req.query(&[("date", &format!("{}", date.format("%m.%d.%Y")))]);
-        }
-
-        if let Some(from) = from {
-            req = req.query(&[("fetchFrom", &format!("{}", from.format("%m.%d.%Y")))]);
-        }
-
-        let res = req.send().await.context("Failed to fetch funds")?;
-
-        if res.status().is_success() {
-            Ok(res.json().await?)
-        } else {
-            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
-        }
+        self.get_with_problem_detail(self.endpoint_url("/f"), query)
+            .await
     }
 
     pub async fn get_fund_stats(
         &self,
         codes: Vec<String>,
         force: bool,
-        sort: SortArguments<FundStatsSortBy>,
+        sort: Option<SortArguments<FundStatsSortBy>>,
     ) -> Result<Vec<FundStats>> {
-        let url = format!("{}/f/stats", self.base_url());
-        let mut req = self.get(url).query(&[
-            ("sortBy", sort.by.to_string()),
-            ("sortDirection", sort.dir.to_string()),
-        ]);
+        let mut query: Vec<(&str, String)> = Vec::with_capacity(4);
+        query_push_sort(&mut query, sort);
+        query_push_bool(&mut query, "force", force);
+        query_push_vec(&mut query, "codes", codes);
 
-        if !codes.is_empty() {
-            req = req.query(&[("codes", codes.join(","))]);
-        }
-
-        if force {
-            req = req.query(&[("force", force)]);
-        }
-
-        let res = req.send().await.context("Failed to fetch fund stats")?;
-
-        if res.status().is_success() {
-            Ok(res.json().await?)
-        } else {
-            anyhow::bail!(res.json::<ProblemDetail>().await?.detail)
-        }
+        self.get_with_problem_detail(self.endpoint_url("/f/stats"), query)
+            .await
     }
+}
+
+fn query_push_vec<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, values: Vec<String>) {
+    if !values.is_empty() {
+        query.push((key, values.join(",")));
+    }
+}
+
+fn query_push_date<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, date: Option<NaiveDate>) {
+    if let Some(date) = date {
+        query.push((key, format!("{}", date.format("%m.%d.%Y"))));
+    }
+}
+
+fn query_push_sort<'a, T: SortByEnum>(
+    query: &mut Vec<(&'a str, String)>,
+    sort: Option<SortArguments<T>>,
+) {
+    if let Some(sort) = sort {
+        query.push(("sortBy", sort.by.to_string()));
+        query.push(("sortDirection", sort.dir.to_string()));
+    }
+}
+
+fn query_push_bool<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, value: bool) {
+    if value {
+        query.push((key, "true".into()));
+    }
+}
+
+fn query_push_fund_filter(query: &mut Vec<(&str, String)>, fund_filter: FundFilterArgs) {
+    query_push_date(query, "date", fund_filter.date);
+    query_push_date(query, "fetchFrom", fund_filter.from);
+    query_push_vec(query, "codes", fund_filter.codes);
 }

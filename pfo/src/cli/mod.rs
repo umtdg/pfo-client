@@ -4,4 +4,4 @@ mod sort;
 
 pub use args::Args;
 pub use command::Command;
-pub use sort::{SortArgumentEnum, SortArguments};
+pub use sort::{SortByEnum, SortArguments};
