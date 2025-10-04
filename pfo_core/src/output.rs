@@ -89,12 +89,12 @@ impl<T: ToRowValue> ToRowValue for Option<T> {
 
 #[derive(Args)]
 pub struct TableArgs<T: Clone + ColumnEnum + Send + Sync + 'static> {
-    #[arg(short = 'o', long = "output", value_delimiter = ',')]
+    #[arg(short = 'o', long = "output", value_delimiter = ',', help = "Limit output to only these columns")]
     pub columns: Option<Vec<T>>,
 
-    #[arg(long)]
+    #[arg(long, help = "Omit headers when printing")]
     pub no_headers: bool,
 
-    #[arg(short, long)]
+    #[arg(short, long, help = "Do not trim long strings. Prices, dates, numerical values etc. are not trimmed")]
     pub wide: bool,
 }

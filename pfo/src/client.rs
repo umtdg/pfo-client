@@ -10,7 +10,6 @@ use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
 use crate::cli::FundFilterArgs;
-use crate::config::Config;
 use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 use crate::problem_detail::ProblemDetail;
@@ -36,11 +35,11 @@ impl DerefMut for Client {
 }
 
 impl Client {
-    pub fn new(config: Config) -> Self {
+    pub fn new(host: String, port: u16) -> Self {
         Self {
             inner: reqwest::Client::new(),
-            host: config.host,
-            port: config.port,
+            host,
+            port,
         }
     }
 

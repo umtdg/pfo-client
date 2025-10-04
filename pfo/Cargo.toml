@@ -12,6 +12,8 @@ pfo_derive = { path = "../pfo_derive" }
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
 tokio = { version = "1.46", features = ["full"] }
 
+clap_complete = { version = "4.5.58" }
+
 anyhow = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }

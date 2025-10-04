@@ -31,7 +31,7 @@ pub enum PortfolioCommand {
 
     #[command(name = "get", visible_alias = "g", about = "Get single portfolio")]
     Get {
-        #[arg(value_name = "PORTFOLIO_ID")]
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
         #[command(flatten)]
@@ -44,10 +44,10 @@ pub enum PortfolioCommand {
         about = "Get how much to spend for each fund in a portfolio"
     )]
     Prices {
-        #[arg(value_name = "PORTFOLIO_ID")]
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portoflio UUID")]
         id: Uuid,
 
-        #[arg(short, long)]
+        #[arg(short, long, help = "Budget to spend on funds")]
         budget: f32,
 
         #[command(flatten)]
@@ -71,7 +71,7 @@ pub enum PortfolioCommand {
         about = "Get fund information for funds in given portfolio"
     )]
     Info {
-        #[arg(value_name = "PORTFOLIO_ID")]
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
         #[command(flatten)]
@@ -92,10 +92,10 @@ pub enum PortfolioCommand {
         about = "Get fund stats for funds in given portfolio"
     )]
     Stats {
-        #[arg(value_name = "PORTFOLIO_ID")]
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
-        #[arg(short, long)]
+        #[arg(short, long, help = "Forces server to update its internal fund stats by passing `force=true`")]
         force: bool,
 
         #[command(flatten)]
@@ -112,16 +112,16 @@ pub enum PortfolioCommand {
 
     #[command(name = "add", visible_alias = "a", about = "Add funds to a portfolio")]
     Add {
-        #[arg(value_name = "PORTFOLIO_ID")]
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
-        #[arg(short, long, value_name = "FUND_CODE")]
+        #[arg(short, long, value_name = "FUND_CODE", help = "Fund code to add")]
         code: String,
 
-        #[arg(short, long, default_value_t = 50)]
+        #[arg(short, long, default_value_t = 50, help = "Weight of the added fund, higher means more preferred")]
         weight: u32,
 
-        #[arg(long, default_value_t = 1)]
+        #[arg(long, default_value_t = 1, help = "Minimum number of amounts to buy the added fund")]
         min_amount: u32,
     },
 
@@ -131,10 +131,10 @@ pub enum PortfolioCommand {
         about = "Remove funds from a portfolio"
     )]
     Remove {
-        #[arg(value_name = "PORTFOLIO_ID")]
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
-        #[arg(short, long, value_name = "FUND_CODE")]
+        #[arg(short, long, value_name = "FUND_CODE", help = "List of fund codes to remove")]
         codes: Vec<String>,
     },
 }

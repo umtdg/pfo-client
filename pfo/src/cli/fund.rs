@@ -12,14 +12,24 @@ use crate::client::Client;
 
 #[derive(Args, Serialize)]
 pub struct FundFilterArgs {
-    #[arg(short, long, value_parser = parse_naive_date)]
+    #[arg(
+        short,
+        long,
+        value_parser = parse_naive_date,
+        help = "Filter output to given date, otherwise no date is sent in query and server decides",
+    )]
     pub date: Option<NaiveDate>,
 
     #[serde(rename = "fetchFrom")]
-    #[arg(short, long, value_parser = parse_naive_date)]
+    #[arg(
+        short,
+        long,
+        value_parser = parse_naive_date,
+        help = "Date from which server should update its information. Fetch range is <fetchFrom> - <date>",
+    )]
     pub from: Option<NaiveDate>,
 
-    #[arg(value_name = "FUND_CODES", value_delimiter = ',')]
+    #[arg(value_name = "FUND_CODES", value_delimiter = ',', help = "List of fund codes to")]
     pub codes: Vec<String>,
 }
 
@@ -44,10 +54,10 @@ pub enum FundCommand {
 
     #[command(name = "stats", visible_alias = "s", about = "Get fund(s) statistics")]
     Stats {
-        #[arg(value_name = "FUND_CODES", value_delimiter = ',')]
+        #[arg(value_name = "FUND_CODES", value_delimiter = ',', help = "List of fund codes to get fund statistics")]
         codes: Vec<String>,
 
-        #[arg(short, long)]
+        #[arg(short, long, help = "Forces server to update its internal fund stats by passing `force=true` to GET query")]
         force: bool,
 
         #[command(flatten)]
