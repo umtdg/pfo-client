@@ -9,8 +9,6 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use cli::Args;
 
-use crate::cli::Command;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();

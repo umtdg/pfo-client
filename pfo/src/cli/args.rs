@@ -1,6 +1,5 @@
 use clap::{ArgAction, Parser, Subcommand};
 
-use crate::cli::Command;
 use crate::cli::fund::FundCommand;
 use crate::cli::portfolio::PortfolioCommand;
 
@@ -39,8 +38,8 @@ pub enum Commands {
     },
 }
 
-impl Command for Commands {
-    async fn handle(self, client: crate::client::Client) -> anyhow::Result<()> {
+impl Commands {
+    pub async fn handle(self, client: crate::client::Client) -> anyhow::Result<()> {
         match self {
             Commands::Portfolio { command } => command.handle(client).await,
             Commands::Fund { command } => command.handle(client).await,
