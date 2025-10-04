@@ -2,14 +2,16 @@ use std::ops::{Deref, DerefMut};
 
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
+use pfo_core::output::ColumnEnumSorted;
+use pfo_core::sort::SortArguments;
 use reqwest::IntoUrl;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
-use crate::cli::{SortArguments, SortByEnum};
+use crate::cli::FundFilterArgs;
 use crate::config::Config;
-use crate::fund::{FundFilterArgs, FundInfo, FundInfoSortBy, FundStats, FundStatsSortBy};
+use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 use crate::problem_detail::ProblemDetail;
 
@@ -126,7 +128,7 @@ impl Client {
     pub async fn get_portfolio_fund_infos(
         &self,
         id: Uuid,
-        sort: &Option<SortArguments<FundInfoSortBy>>,
+        sort: &Option<SortArguments<FundInfoColumn>>,
     ) -> Result<Vec<FundInfo>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(2);
         query_push_sort(&mut query, sort);
@@ -138,7 +140,7 @@ impl Client {
     pub async fn get_protfolio_fund_stats(
         &self,
         id: Uuid,
-        sort: &Option<SortArguments<FundStatsSortBy>>,
+        sort: &Option<SortArguments<FundStatsColumn>>,
         force: bool,
     ) -> Result<Vec<FundStats>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(3);
@@ -157,7 +159,7 @@ impl Client {
     pub async fn get_funds(
         &self,
         fund_filter: FundFilterArgs,
-        sort: &Option<SortArguments<FundInfoSortBy>>,
+        sort: &Option<SortArguments<FundInfoColumn>>,
     ) -> Result<Vec<FundInfo>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(5);
         query_push_sort(&mut query, sort);
@@ -171,7 +173,7 @@ impl Client {
         &self,
         codes: Vec<String>,
         force: bool,
-        sort: &Option<SortArguments<FundStatsSortBy>>,
+        sort: &Option<SortArguments<FundStatsColumn>>,
     ) -> Result<Vec<FundStats>> {
         let mut query: Vec<(&str, String)> = Vec::with_capacity(4);
         query_push_sort(&mut query, sort);
@@ -195,12 +197,12 @@ fn query_push_date<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, date: O
     }
 }
 
-fn query_push_sort<'a, T: SortByEnum>(
+fn query_push_sort<'a, T: ColumnEnumSorted>(
     query: &mut Vec<(&'a str, String)>,
     sort: &Option<SortArguments<T>>,
 ) {
     if let Some(sort) = sort {
-        query.push(("sortBy", sort.by.to_string()));
+        query.push(("sortBy", sort.by.to_server_name().to_string()));
         query.push(("sortDirection", sort.dir.to_string()));
     }
 }

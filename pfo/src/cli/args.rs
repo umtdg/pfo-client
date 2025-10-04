@@ -1,8 +1,8 @@
 use clap::{ArgAction, Parser, Subcommand};
 
 use crate::cli::Command;
-use crate::fund::FundCommand;
-use crate::portfolio::PortfolioCommand;
+use crate::cli::fund::FundCommand;
+use crate::cli::portfolio::PortfolioCommand;
 
 #[derive(Parser)]
 #[command(name = "pfo")]

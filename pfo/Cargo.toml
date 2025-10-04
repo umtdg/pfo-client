@@ -7,13 +7,14 @@ edition.workspace = true
 
 [dependencies]
 pfo_core = { path = "../pfo_core" }
+pfo_derive = { path = "../pfo_derive" }
 
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
 tokio = { version = "1.46", features = ["full"] }
-clap = { version = "4.5", features = ["derive"] }
-uuid = { version = "1.17", features = ["v4", "serde"] }
 
 anyhow = { workspace = true }
 chrono = { workspace = true }
+clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true }

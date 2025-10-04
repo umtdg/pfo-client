@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "pfo",
     "pfo_core",
+    "pfo_derive",
 ]
 
 [workspace.package]
@@ -14,5 +15,7 @@ edition = "2024"
 [workspace.dependencies]
 anyhow = { version = "1.0", default-features = false }
 chrono = { version = "0.4.41", default-features = false, features = ["alloc", "serde", "std"] }
+clap = { version = "4.5", features = ["derive"] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0", default-features = false }
+serde_json = { version = "1.0", default-features = false, features = ["std"] }
+uuid = { version = "1.17", features = ["v4", "serde"] }

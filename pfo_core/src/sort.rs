@@ -1,11 +1,7 @@
 use clap::ValueEnum;
 use serde::Serialize;
 
-pub trait SortByEnum: clap::ValueEnum + ToString {
-    fn get_help_string() -> String;
-
-    fn value_parser(s: &str) -> Result<Self, String>;
-}
+use crate::output::ColumnEnumSorted;
 
 #[derive(Clone, Debug, ValueEnum, Serialize)]
 pub enum SortDirection {
@@ -23,7 +19,7 @@ impl ToString for SortDirection {
     }
 }
 
-impl SortByEnum for SortDirection {
+impl SortDirection {
     fn get_help_string() -> String {
         Self::value_variants()
             .iter()
@@ -38,7 +34,7 @@ impl SortByEnum for SortDirection {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct SortArguments<T: SortByEnum> {
+pub struct SortArguments<T: ColumnEnumSorted> {
     #[serde(rename = "sortBy")]
     pub by: T,
 
@@ -46,12 +42,12 @@ pub struct SortArguments<T: SortByEnum> {
     pub dir: SortDirection,
 }
 
-impl<T: SortByEnum> SortArguments<T> {
+impl<T: ColumnEnumSorted> SortArguments<T> {
     pub fn value_parser(s: &str) -> Result<Self, String> {
         let mut parts = s.split_ascii_whitespace();
 
         Ok(Self {
-            by: T::value_parser(parts.next().unwrap_or_default())?,
+            by: T::parse_sort_by(parts.next().unwrap_or_default())?,
             dir: SortDirection::value_parser(parts.next().unwrap_or("asc"))?,
         })
     }
@@ -59,7 +55,7 @@ impl<T: SortByEnum> SortArguments<T> {
     pub fn get_help() -> String {
         format!(
             "<by> <direction> [, <by> <direction>]\nBY: {}\nDIRECTION: {}",
-            T::get_help_string(),
+            T::help_sort_by(),
             SortDirection::get_help_string(),
         )
     }

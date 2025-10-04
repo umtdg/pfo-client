@@ -1,7 +1,5 @@
-mod cli;
-mod models;
+mod fund_info;
+mod fund_stats;
 
-pub use cli::{FundCommand, FundFilterArgs};
-pub use models::{
-    FundInfo, FundInfoColumn, FundInfoSortBy, FundStats, FundStatsColumn, FundStatsSortBy,
-};
+pub use fund_info::{FundInfo, FundInfoColumn};
+pub use fund_stats::{FundStats, FundStatsColumn};

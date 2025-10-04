@@ -2,17 +2,15 @@ use std::collections::HashSet;
 
 use anyhow::{Context, Result};
 use clap::Subcommand;
+use pfo_core::output::{Table, TableArgs};
+use pfo_core::sort::SortArguments;
 use uuid::Uuid;
 
+use crate::cli::fund::FundFilterArgs;
 use crate::client::Client;
-use crate::fund::{
-    FundFilterArgs, FundInfo, FundInfoColumn, FundInfoSortBy, FundStats, FundStatsColumn,
-    FundStatsSortBy,
-};
-use crate::output::{OutputArgs, OutputTable};
+use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{
-    FundToBuy, FundToBuyColumn, FundToBuySortBy, Portfolio, PortfolioColumn, PortfolioFundAdd,
-    PortfolioSortBy, PortfolioUpdate,
+    FundToBuy, FundToBuyColumn, Portfolio, PortfolioColumn, PortfolioFundAdd, PortfolioUpdate,
 };
 
 #[derive(Subcommand)]
@@ -20,7 +18,15 @@ pub enum PortfolioCommand {
     #[command(name = "list", visible_alias = "ls", about = "List all portfolios")]
     List {
         #[command(flatten)]
-        output: OutputArgs<PortfolioColumn, PortfolioSortBy>,
+        output: TableArgs<PortfolioColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = SortArguments::<PortfolioColumn>::value_parser,
+            help = SortArguments::<PortfolioColumn>::get_help()
+        )]
+        sort: Option<SortArguments<PortfolioColumn>>,
     },
 
     #[command(name = "get", visible_alias = "g", about = "Get single portfolio")]
@@ -29,7 +35,7 @@ pub enum PortfolioCommand {
         id: Uuid,
 
         #[command(flatten)]
-        output: OutputArgs<PortfolioColumn, PortfolioSortBy>,
+        output: TableArgs<PortfolioColumn>,
     },
 
     #[command(
@@ -48,7 +54,15 @@ pub enum PortfolioCommand {
         fund_filter: FundFilterArgs,
 
         #[command(flatten)]
-        output: OutputArgs<FundToBuyColumn, FundToBuySortBy>,
+        output: TableArgs<FundToBuyColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = SortArguments::<FundToBuyColumn>::value_parser,
+            help = SortArguments::<FundToBuyColumn>::get_help()
+        )]
+        sort: Option<SortArguments<FundToBuyColumn>>,
     },
 
     #[command(
@@ -61,7 +75,15 @@ pub enum PortfolioCommand {
         id: Uuid,
 
         #[command(flatten)]
-        output: OutputArgs<FundInfoColumn, FundInfoSortBy>,
+        output: TableArgs<FundInfoColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = SortArguments::<FundInfoColumn>::value_parser,
+            help = SortArguments::<FundInfoColumn>::get_help()
+        )]
+        sort: Option<SortArguments<FundInfoColumn>>,
     },
 
     #[command(
@@ -77,7 +99,15 @@ pub enum PortfolioCommand {
         force: bool,
 
         #[command(flatten)]
-        output: OutputArgs<FundStatsColumn, FundStatsSortBy>,
+        output: TableArgs<FundStatsColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = SortArguments::<FundStatsColumn>::value_parser,
+            help = SortArguments::<FundStatsColumn>::get_help()
+        )]
+        sort: Option<SortArguments<FundStatsColumn>>,
     },
 
     #[command(name = "add", visible_alias = "a", about = "Add funds to a portfolio")]
@@ -112,7 +142,7 @@ pub enum PortfolioCommand {
 impl PortfolioCommand {
     pub async fn handle(self, client: Client) -> Result<()> {
         match self {
-            PortfolioCommand::List { output } => {
+            PortfolioCommand::List { output, .. } => {
                 Portfolio::print_table(&client.list_portfolios().await?, output);
             }
             PortfolioCommand::Get { id, output } => {
@@ -123,6 +153,7 @@ impl PortfolioCommand {
                 budget,
                 fund_filter,
                 output,
+                ..
             } => {
                 FundToBuy::print_table(
                     &client.get_portfolio_prices(id, budget, fund_filter).await?,
@@ -171,17 +202,17 @@ impl PortfolioCommand {
 
                 println!("Successfully removed funds");
             }
-            PortfolioCommand::Info { id, output } => {
-                FundInfo::print_table(
-                    &client.get_portfolio_fund_infos(id, &output.sort).await?,
-                    output,
-                );
+            PortfolioCommand::Info { id, output, sort } => {
+                FundInfo::print_table(&client.get_portfolio_fund_infos(id, &sort).await?, output);
             }
-            PortfolioCommand::Stats { id, force, output } => {
+            PortfolioCommand::Stats {
+                id,
+                force,
+                output,
+                sort,
+            } => {
                 FundStats::print_table(
-                    &client
-                        .get_protfolio_fund_stats(id, &output.sort, force)
-                        .await?,
+                    &client.get_protfolio_fund_stats(id, &sort, force).await?,
                     output,
                 );
             }

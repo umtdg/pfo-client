@@ -1,8 +1,9 @@
-mod cli;
-mod models;
+mod fund_to_buy;
+mod portfolio;
+mod portfolio_fund_add;
+mod portfolio_update;
 
-pub use cli::PortfolioCommand;
-pub use models::{
-    FundToBuy, FundToBuyColumn, FundToBuySortBy, Portfolio, PortfolioColumn, PortfolioFundAdd,
-    PortfolioSortBy, PortfolioUpdate,
-};
+pub use fund_to_buy::{FundToBuy, FundToBuyColumn};
+pub use portfolio::{Portfolio, PortfolioColumn};
+pub use portfolio_fund_add::PortfolioFundAdd;
+pub use portfolio_update::PortfolioUpdate;
