@@ -12,7 +12,10 @@ use cli::Args;
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    let client = client::Client::new(args.host.unwrap_or("localhost".into()), args.port.unwrap_or(8080));
+    let client = client::Client::new(
+        args.host.unwrap_or("localhost".into()),
+        args.port.unwrap_or(8080),
+    );
 
     args.command.handle(client).await
 }
