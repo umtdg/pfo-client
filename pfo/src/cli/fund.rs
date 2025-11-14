@@ -8,7 +8,7 @@ use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use pfo_core::output::{Table, TableArgs};
 use pfo_core::parse_naive_date;
 
-use crate::client::Client;
+use crate::client::PfoClient;
 
 #[derive(Args, Serialize)]
 pub struct FundFilterArgs {
@@ -74,14 +74,14 @@ pub enum FundCommand {
 }
 
 impl FundCommand {
-    pub async fn handle(self, client: Client) -> Result<()> {
+    pub async fn handle(self, client: PfoClient) -> Result<()> {
         match self {
             FundCommand::Get {
                 fund_filter,
                 output,
                 sort,
             } => {
-                FundInfo::print_table(&client.get_funds(fund_filter, &sort).await?, output);
+                FundInfo::print_table(&client.get_funds(fund_filter, sort).await?, output);
             }
             FundCommand::Stats {
                 codes,
@@ -89,7 +89,7 @@ impl FundCommand {
                 output,
                 sort,
             } => {
-                FundStats::print_table(&client.get_fund_stats(codes, force, &sort).await?, output);
+                FundStats::print_table(&client.get_fund_stats(codes, force, sort).await?, output);
             }
         }
 

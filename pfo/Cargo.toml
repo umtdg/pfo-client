@@ -13,6 +13,8 @@ reqwest = { version = "0.12", default-features = false, features = ["json"] }
 tokio = { version = "1.46", features = ["full"] }
 
 clap_complete = { version = "4.5.58" }
+log = "0.4.28"
+env_logger = "0.11.8"
 
 anyhow = { workspace = true }
 chrono = { workspace = true }
