@@ -1,12 +1,9 @@
-use std::ops::{Deref, DerefMut};
-
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
 use pfo_core::output::ColumnEnumSorted;
 use pfo_core::sort::SortArguments;
-use reqwest::IntoUrl;
+use reqwest::{Client, Method, RequestBuilder, Response, Url};
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
 use crate::cli::FundFilterArgs;
@@ -14,101 +11,103 @@ use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{FundToBuy, Portfolio, PortfolioUpdate};
 use crate::problem_detail::ProblemDetail;
 
-pub struct Client {
-    inner: reqwest::Client,
-    host: String,
-    port: u16,
+pub struct PfoClient {
+    client: Client,
+    url: Url,
 }
 
-impl Deref for Client {
-    type Target = reqwest::Client;
+impl PfoClient {
+    pub fn new(host: String, port: u16) -> Result<Self> {
+        let url = format!("http://{}:{}", host, port);
+        let url = Url::parse(&url).context(format!("Invalid URL string: {}", url))?;
 
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
+        log::debug!("Creating client with url {}", url.to_string());
 
-impl DerefMut for Client {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-impl Client {
-    pub fn new(host: String, port: u16) -> Self {
-        Self {
-            inner: reqwest::Client::new(),
-            host,
-            port,
-        }
+        Ok(Self {
+            client: Client::new(),
+            url,
+        })
     }
 
-    fn endpoint_url<T: ToString>(&self, endpoint: T) -> String {
-        format!("http://{}:{}{}", self.host, self.port, endpoint.to_string())
-    }
-
-    fn portfolio_endpoint_url<T: ToString>(&self, endpoint: T, id: Uuid) -> String {
-        format!(
-            "http://{}:{}/p/{}{}",
-            self.host,
-            self.port,
-            id,
-            endpoint.to_string()
-        )
-    }
-
-    pub async fn get_with_problem_detail<SuccessDto, Url, Query>(
+    fn request<'a, E: ToString, B: Serialize>(
         &self,
-        url: Url,
-        query: Query,
-    ) -> Result<SuccessDto>
-    where
-        SuccessDto: DeserializeOwned,
-        Url: IntoUrl,
-        Query: Serialize,
-    {
-        let req = self.get(url).query(&query);
+        method: Method,
+        endpoint: E,
+        query: Option<Query<'a>>,
+        body: Option<B>,
+    ) -> RequestBuilder {
+        let mut url = self.url.clone();
+        url.set_path(&endpoint.to_string());
 
-        let res = req.send().await.context("GET failed")?;
+        log::debug!("Create request for {}", url.to_string());
 
-        if res.status().is_success() {
-            Ok(res.json().await?)
-        } else {
-            anyhow::bail!(format!("{}", res.json::<ProblemDetail>().await?))
+        let mut request = self.client.request(method, url);
+
+        if let Some(query) = query {
+            request = request.query(&query.pairs);
         }
+
+        if let Some(body) = body {
+            request = request.json(&body);
+        }
+
+        request
     }
 
-    pub async fn put_with_problem_detail<SuccessDto, Url, Query, BodyDto>(
+    async fn send_internal(
         &self,
-        url: Url,
-        query: Query,
-        body: &BodyDto,
-    ) -> Result<SuccessDto>
-    where
-        SuccessDto: DeserializeOwned,
-        Url: IntoUrl,
-        Query: Serialize,
-        BodyDto: Serialize,
-    {
-        let req = self.get(url).query(&query).json(body);
+        request: RequestBuilder,
+        should_have_content: bool,
+    ) -> Result<Response> {
+        let response = request.send().await.context("Failed to send request")?;
 
-        let res = req.send().await.context("PUT failed")?;
-
-        if res.status().is_success() {
-            Ok(res.json().await?)
-        } else {
-            anyhow::bail!(format!("{}", res.json::<ProblemDetail>().await?))
+        let status = response.status().as_u16();
+        if status >= 400 {
+            bail!(match response.json::<ProblemDetail>().await {
+                Ok(problem) => format!("{}", problem),
+                Err(err) => format!("Error response does not contain ProblemDetail: {:?}", err),
+            });
         }
+
+        if should_have_content && response.content_length().is_none_or(|x| x == 0) {
+            bail!("Expected body, got nothing");
+        }
+
+        Ok(response)
+    }
+
+    async fn send<'a, E: ToString, B: Serialize>(
+        &self,
+        method: Method,
+        endpoint: E,
+        query: Option<Query<'a>>,
+        body: Option<B>,
+        should_have_content: bool,
+    ) -> Result<Response> {
+        let request = self.request(method, endpoint, query, body);
+        self.send_internal(request, should_have_content).await
     }
 
     pub async fn list_portfolios(&self) -> Result<Vec<Portfolio>> {
-        self.get_with_problem_detail(self.endpoint_url("/p"), ())
+        self.send(Method::GET, "/p", None, none_serialize(), true)
+            .await?
+            .json()
             .await
+            .context("Error when decoding/parsing Portfolio list from response")
     }
 
     pub async fn get_portfolio(&self, id: Uuid) -> Result<Portfolio> {
-        self.get_with_problem_detail(self.portfolio_endpoint_url("", id), ())
-            .await
+        self.send(
+            Method::GET,
+            format!("/p/{}", id),
+            None,
+            none_serialize(),
+            true,
+        )
+        .await?
+        .json()
+        .await
+        .context("Error when decoding/parsing Portfolio from response")
     }
 
     pub async fn get_portfolio_prices(
@@ -117,103 +116,162 @@ impl Client {
         budget: f32,
         fund_filter: FundFilterArgs,
     ) -> Result<Vec<FundToBuy>> {
-        let mut query: Vec<(&str, String)> = vec![("budget", budget.to_string())];
-        query_push_fund_filter(&mut query, fund_filter);
+        let mut query: Query = vec![("budget", budget.to_string())].into();
+        query.push_fund_filter(fund_filter);
 
-        self.get_with_problem_detail(self.portfolio_endpoint_url("/prices", id), query)
-            .await
+        self.send(
+            Method::GET,
+            format!("/p/{}/prices", id),
+            Some(query),
+            none_serialize(),
+            true,
+        )
+        .await?
+        .json()
+        .await
+        .context("Error when decoding/parsing list of fund buy informations from response")
     }
 
     pub async fn get_portfolio_fund_infos(
         &self,
         id: Uuid,
-        sort: &Option<SortArguments<FundInfoColumn>>,
+        sort: Option<SortArguments<FundInfoColumn>>,
     ) -> Result<Vec<FundInfo>> {
-        let mut query: Vec<(&str, String)> = Vec::with_capacity(2);
-        query_push_sort(&mut query, sort);
+        let mut query: Query = Vec::with_capacity(2).into();
+        query.push_sort(sort);
 
-        self.get_with_problem_detail(self.portfolio_endpoint_url("/info", id), query)
-            .await
+        self.send(
+            Method::GET,
+            format!("/p/{}/info", id),
+            Some(query),
+            none_serialize(),
+            true,
+        )
+        .await?
+        .json()
+        .await
+        .context("Error when decoding/parsing list of fund informations from response")
     }
 
     pub async fn get_protfolio_fund_stats(
         &self,
         id: Uuid,
-        sort: &Option<SortArguments<FundStatsColumn>>,
+        sort: Option<SortArguments<FundStatsColumn>>,
         force: bool,
     ) -> Result<Vec<FundStats>> {
-        let mut query: Vec<(&str, String)> = Vec::with_capacity(3);
-        query_push_sort(&mut query, sort);
-        query_push_bool(&mut query, "force", force);
+        let mut query: Query = Vec::with_capacity(3).into();
+        query.push_sort(sort);
+        query.push_bool("force", force);
 
-        self.get_with_problem_detail(self.portfolio_endpoint_url("/stats", id), query)
-            .await
+        self.send(
+            Method::GET,
+            format!("/p/{}/stats", id),
+            Some(query),
+            none_serialize(),
+            true,
+        )
+        .await?
+        .json()
+        .await
+        .context("Error when decoding/parsing list of fund stats from response")
     }
 
     pub async fn update_portfolio(&self, id: Uuid, update: PortfolioUpdate) -> Result<()> {
-        self.put_with_problem_detail(self.portfolio_endpoint_url("", id), (), &update)
-            .await
+        self.send(Method::PUT, format!("/p/{}", id), None, Some(update), false)
+            .await?;
+
+        Ok(())
     }
 
     pub async fn get_funds(
         &self,
         fund_filter: FundFilterArgs,
-        sort: &Option<SortArguments<FundInfoColumn>>,
+        sort: Option<SortArguments<FundInfoColumn>>,
     ) -> Result<Vec<FundInfo>> {
-        let mut query: Vec<(&str, String)> = Vec::with_capacity(5);
-        query_push_sort(&mut query, sort);
-        query_push_fund_filter(&mut query, fund_filter);
+        let mut query: Query = Vec::with_capacity(5).into();
+        query.push_sort(sort);
+        query.push_fund_filter(fund_filter);
 
-        self.get_with_problem_detail(self.endpoint_url("/f"), query)
+        self.send(Method::GET, "/f", Some(query), none_serialize(), true)
+            .await?
+            .json()
             .await
+            .context("Error when decoding/parsing list of fund informations from response")
     }
 
     pub async fn get_fund_stats(
         &self,
         codes: Vec<String>,
         force: bool,
-        sort: &Option<SortArguments<FundStatsColumn>>,
+        sort: Option<SortArguments<FundStatsColumn>>,
     ) -> Result<Vec<FundStats>> {
-        let mut query: Vec<(&str, String)> = Vec::with_capacity(4);
-        query_push_sort(&mut query, sort);
-        query_push_bool(&mut query, "force", force);
-        query_push_vec(&mut query, "codes", codes);
+        let mut query: Query = Vec::with_capacity(4).into();
+        query.push_sort(sort);
+        query.push_bool("force", force);
+        query.push_vec("codes", codes);
 
-        self.get_with_problem_detail(self.endpoint_url("/f/stats"), query)
+        self.send(Method::GET, "/f", Some(query), none_serialize(), true)
+            .await?
+            .json()
             .await
+            .context("Error when decoding/parsing list of fund stats from response")
     }
 }
 
-fn query_push_vec<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, values: Vec<String>) {
-    if !values.is_empty() {
-        query.push((key, values.join(",")));
+struct Query<'a> {
+    pub(crate) pairs: Vec<(&'a str, String)>,
+}
+
+impl<'a> From<Vec<(&'a str, String)>> for Query<'a> {
+    fn from(value: Vec<(&'a str, String)>) -> Self {
+        Self { pairs: value }
     }
 }
 
-fn query_push_date<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, date: Option<NaiveDate>) {
-    if let Some(date) = date {
-        query.push((key, format!("{}", date.format("%m.%d.%Y"))));
+impl<'a> Query<'a> {
+    pub fn push_vec(&mut self, key: &'a str, values: Vec<String>) {
+        if !values.is_empty() {
+            self.pairs.push((key, values.join(",")));
+        }
+    }
+
+    pub fn push_date(&mut self, key: &'a str, date: Option<NaiveDate>) {
+        if let Some(date) = date {
+            self.pairs
+                .push((key, format!("{}", date.format("%m.%d.%Y"))));
+        }
+    }
+
+    pub fn push_sort<T: ColumnEnumSorted>(&mut self, sort: Option<SortArguments<T>>) {
+        if let Some(sort) = sort {
+            self.pairs
+                .push(("sortBy", sort.by.to_server_name().to_string()));
+            self.pairs.push(("sortDirection", sort.dir.to_string()));
+        }
+    }
+
+    pub fn push_bool(&mut self, key: &'a str, value: bool) {
+        if value {
+            self.pairs.push((key, "true".into()));
+        }
+    }
+
+    pub fn push_fund_filter(&mut self, fund_filter: FundFilterArgs) {
+        self.push_date("date", fund_filter.date);
+        self.push_date("fetchFrom", fund_filter.from);
+        self.push_vec("codes", fund_filter.codes);
     }
 }
 
-fn query_push_sort<'a, T: ColumnEnumSorted>(
-    query: &mut Vec<(&'a str, String)>,
-    sort: &Option<SortArguments<T>>,
-) {
-    if let Some(sort) = sort {
-        query.push(("sortBy", sort.by.to_server_name().to_string()));
-        query.push(("sortDirection", sort.dir.to_string()));
+#[derive(Serialize)]
+struct NoneSerialize;
+
+impl NoneSerialize {
+    pub fn new() -> Option<Self> {
+        None
     }
 }
 
-fn query_push_bool<'a>(query: &mut Vec<(&'a str, String)>, key: &'a str, value: bool) {
-    if value {
-        query.push((key, "true".into()));
-    }
-}
-
-fn query_push_fund_filter(query: &mut Vec<(&str, String)>, fund_filter: FundFilterArgs) {
-    query_push_date(query, "date", fund_filter.date);
-    query_push_date(query, "fetchFrom", fund_filter.from);
-    query_push_vec(query, "codes", fund_filter.codes);
+fn none_serialize() -> Option<NoneSerialize> {
+    NoneSerialize::new()
 }

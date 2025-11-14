@@ -7,7 +7,7 @@ use pfo_core::sort::SortArguments;
 use uuid::Uuid;
 
 use crate::cli::fund::FundFilterArgs;
-use crate::client::Client;
+use crate::client::PfoClient;
 use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{
     FundToBuy, FundToBuyColumn, Portfolio, PortfolioColumn, PortfolioFundAdd, PortfolioUpdate,
@@ -140,7 +140,7 @@ pub enum PortfolioCommand {
 }
 
 impl PortfolioCommand {
-    pub async fn handle(self, client: Client) -> Result<()> {
+    pub async fn handle(self, client: PfoClient) -> Result<()> {
         match self {
             PortfolioCommand::List { output, .. } => {
                 Portfolio::print_table(&client.list_portfolios().await?, output);
@@ -203,7 +203,7 @@ impl PortfolioCommand {
                 println!("Successfully removed funds");
             }
             PortfolioCommand::Info { id, output, sort } => {
-                FundInfo::print_table(&client.get_portfolio_fund_infos(id, &sort).await?, output);
+                FundInfo::print_table(&client.get_portfolio_fund_infos(id, sort).await?, output);
             }
             PortfolioCommand::Stats {
                 id,
@@ -212,7 +212,7 @@ impl PortfolioCommand {
                 sort,
             } => {
                 FundStats::print_table(
-                    &client.get_protfolio_fund_stats(id, &sort, force).await?,
+                    &client.get_protfolio_fund_stats(id, sort, force).await?,
                     output,
                 );
             }
