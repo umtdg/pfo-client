@@ -62,15 +62,12 @@ impl PfoClient {
         let response = request.send().await.context("Failed to send request")?;
 
         let status = response.status().as_u16();
+        log::debug!("Got response {}", status);
         if status >= 400 {
             bail!(match response.json::<ProblemDetail>().await {
                 Ok(problem) => format!("{}", problem),
                 Err(err) => format!("Error response does not contain ProblemDetail: {:?}", err),
             });
-        }
-
-        if should_have_content && response.content_length().is_none_or(|x| x == 0) {
-            bail!("Expected body, got nothing");
         }
 
         Ok(response)
