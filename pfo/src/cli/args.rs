@@ -54,12 +54,7 @@ impl Commands {
                 let bin_name = cmd.get_name().to_string();
                 eprintln!("Generating completion for {generator:?}");
 
-                generate(
-                    generator,
-                    &mut cmd,
-                    bin_name,
-                    &mut io::stdout(),
-                );
+                generate(generator, &mut cmd, bin_name, &mut io::stdout());
 
                 Ok(())
             }

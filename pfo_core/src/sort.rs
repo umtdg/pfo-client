@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use clap::ValueEnum;
 use serde::Serialize;
 
@@ -9,13 +11,12 @@ pub enum SortDirection {
     Desc,
 }
 
-impl ToString for SortDirection {
-    fn to_string(&self) -> String {
+impl Display for SortDirection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SortDirection::Asc => "ASC",
-            SortDirection::Desc => "DESC",
+            SortDirection::Asc => write!(f, "ASC"),
+            SortDirection::Desc => write!(f, "DESC"),
         }
-        .into()
     }
 }
 

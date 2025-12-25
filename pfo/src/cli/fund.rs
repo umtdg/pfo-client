@@ -29,7 +29,11 @@ pub struct FundFilterArgs {
     )]
     pub from: Option<NaiveDate>,
 
-    #[arg(value_name = "FUND_CODES", value_delimiter = ',', help = "List of fund codes to")]
+    #[arg(
+        value_name = "FUND_CODES",
+        value_delimiter = ',',
+        help = "List of fund codes to"
+    )]
     pub codes: Vec<String>,
 }
 
@@ -54,10 +58,18 @@ pub enum FundCommand {
 
     #[command(name = "stats", visible_alias = "s", about = "Get fund(s) statistics")]
     Stats {
-        #[arg(value_name = "FUND_CODES", value_delimiter = ',', help = "List of fund codes to get fund statistics")]
+        #[arg(
+            value_name = "FUND_CODES",
+            value_delimiter = ',',
+            help = "List of fund codes to get fund statistics"
+        )]
         codes: Vec<String>,
 
-        #[arg(short, long, help = "Forces server to update its internal fund stats by passing `force=true` to GET query")]
+        #[arg(
+            short,
+            long,
+            help = "Forces server to update its internal fund stats by passing `force=true` to GET query"
+        )]
         force: bool,
 
         #[command(flatten)]

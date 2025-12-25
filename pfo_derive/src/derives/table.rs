@@ -26,7 +26,7 @@ pub(crate) fn derive_table(input: &DeriveInput) -> Result<TokenStream, syn::Erro
         .collect();
 
     let column_enum = gen_column_enum(&column_enum_ident, &items);
-    let row_struct = gen_row_struct(&row_struct_ident, &items, &ident, &column_enum_ident);
+    let row_struct = gen_row_struct(&row_struct_ident, &items, ident, &column_enum_ident);
 
     Ok(quote! {
         #column_enum
