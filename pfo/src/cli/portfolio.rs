@@ -164,7 +164,7 @@ impl PortfolioCommand {
                 Portfolio::print_table(&client.list_portfolios().await?, output);
             }
             PortfolioCommand::Get { id, output } => {
-                Portfolio::print_table(&vec![client.get_portfolio(id).await?], output);
+                Portfolio::print_table(&[client.get_portfolio(id).await?], output);
             }
             PortfolioCommand::Prices {
                 id,
