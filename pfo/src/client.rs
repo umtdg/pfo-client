@@ -22,7 +22,7 @@ impl PfoClient {
         let url = format!("http://{}:{}", host, port);
         let url = Url::parse(&url).context(format!("Invalid URL string: {}", url))?;
 
-        log::debug!("Creating client with url {}", url.to_string());
+        log::debug!("Creating client with url {}", url);
 
         Ok(Self {
             client: Client::new(),
@@ -40,7 +40,7 @@ impl PfoClient {
         let mut url = self.url.clone();
         url.set_path(&endpoint.to_string());
 
-        log::debug!("Create request for {}", url.to_string());
+        log::debug!("Create request for {}", url);
 
         let mut request = self.client.request(method, url);
 
