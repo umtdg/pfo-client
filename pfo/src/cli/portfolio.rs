@@ -153,10 +153,13 @@ impl PortfolioCommand {
                 budget,
                 fund_filter,
                 output,
+                sort,
                 ..
             } => {
                 FundToBuy::print_table(
-                    &client.get_portfolio_prices(id, budget, fund_filter).await?,
+                    &client
+                        .get_portfolio_prices(id, budget, fund_filter, sort)
+                        .await?,
                     output,
                 );
             }
