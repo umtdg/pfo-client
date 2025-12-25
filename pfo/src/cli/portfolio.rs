@@ -95,7 +95,11 @@ pub enum PortfolioCommand {
         #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
-        #[arg(short, long, help = "Forces server to update its internal fund stats by passing `force=true`")]
+        #[arg(
+            short,
+            long,
+            help = "Forces server to update its internal fund stats by passing `force=true`"
+        )]
         force: bool,
 
         #[command(flatten)]
@@ -118,10 +122,19 @@ pub enum PortfolioCommand {
         #[arg(short, long, value_name = "FUND_CODE", help = "Fund code to add")]
         code: String,
 
-        #[arg(short, long, default_value_t = 50, help = "Weight of the added fund, higher means more preferred")]
+        #[arg(
+            short,
+            long,
+            default_value_t = 50,
+            help = "Weight of the added fund, higher means more preferred"
+        )]
         weight: u32,
 
-        #[arg(long, default_value_t = 1, help = "Minimum number of amounts to buy the added fund")]
+        #[arg(
+            long,
+            default_value_t = 1,
+            help = "Minimum number of amounts to buy the added fund"
+        )]
         min_amount: u32,
     },
 
@@ -134,7 +147,12 @@ pub enum PortfolioCommand {
         #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
-        #[arg(short, long, value_name = "FUND_CODE", help = "List of fund codes to remove")]
+        #[arg(
+            short,
+            long,
+            value_name = "FUND_CODE",
+            help = "List of fund codes to remove"
+        )]
         codes: Vec<String>,
     },
 }
