@@ -43,17 +43,19 @@ fn ty_should_trim(ty: &Type) -> bool {
         Type::Path(type_path) => match &type_path.qself {
             Some(_) => todo!("With QSelf"),
             None => {
-                let path_idents = type_path.path.segments.iter().into_iter().fold(
-                    String::new(),
-                    |mut acc, seg| {
-                        acc.push_str(&seg.ident.to_string());
-                        acc.push('|');
-                        acc
-                    },
-                );
+                let path_idents =
+                    type_path
+                        .path
+                        .segments
+                        .iter()
+                        .fold(String::new(), |mut acc, seg| {
+                            acc.push_str(&seg.ident.to_string());
+                            acc.push('|');
+                            acc
+                        });
 
                 let option_seg = OPTION_PATH_IDENTS
-                    .into_iter()
+                    .iter()
                     .find(|s| &path_idents == *s)
                     .and_then(|_| type_path.path.segments.last());
 
@@ -62,7 +64,7 @@ fn ty_should_trim(ty: &Type) -> bool {
                 }
 
                 STRING_PATH_IDENTS
-                    .into_iter()
+                    .iter()
                     .find(|s| &path_idents == *s)
                     .and_then(|_| type_path.path.segments.last())
                     .is_some()

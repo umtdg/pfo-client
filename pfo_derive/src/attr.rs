@@ -31,7 +31,7 @@ impl Attr {
     pub(crate) fn lit_str_or_abort(&self) -> Result<&LitStr, syn::Error> {
         let value = self.value_or_abort()?;
         match value {
-            AttrValue::LitStr(t) => Ok(t),
+            AttrValue::Str(t) => Ok(t),
             _ => {
                 panic!(
                     "attribute `{:?}` can only accept string literals",
@@ -44,7 +44,7 @@ impl Attr {
     pub(crate) fn lit_int_or_abort(&self) -> Result<&LitInt, syn::Error> {
         let value = self.value_or_abort()?;
         match value {
-            AttrValue::LitInt(t) => Ok(t),
+            AttrValue::Int(t) => Ok(t),
             _ => {
                 panic!(
                     "attribute `{:?}` can only accept string literals",
@@ -57,7 +57,7 @@ impl Attr {
     pub(crate) fn lit_bool_or_abort(&self) -> Result<&LitBool, syn::Error> {
         let value = self.value_or_abort()?;
         match value {
-            AttrValue::LitBool(t) => Ok(t),
+            AttrValue::Bool(t) => Ok(t),
             _ => {
                 panic!(
                     "attribute `{:?}` can only accept string literals",
@@ -84,11 +84,11 @@ impl Parse for Attr {
         let value = if input.peek(Token![=]) {
             let _ = input.parse::<Token![=]>()?; // skip `=`
             if input.peek(LitStr) {
-                Some(AttrValue::LitStr(input.parse()?))
+                Some(AttrValue::Str(input.parse()?))
             } else if input.peek(LitInt) {
-                Some(AttrValue::LitInt(input.parse()?))
+                Some(AttrValue::Int(input.parse()?))
             } else if input.peek(LitBool) {
-                Some(AttrValue::LitBool(input.parse()?))
+                Some(AttrValue::Bool(input.parse()?))
             } else {
                 None
             }
@@ -110,17 +110,17 @@ pub(crate) enum AttrName {
 }
 
 pub(crate) enum AttrValue {
-    LitStr(LitStr),
-    LitBool(LitBool),
-    LitInt(LitInt),
+    Str(LitStr),
+    Bool(LitBool),
+    Int(LitInt),
 }
 
 impl ToTokens for AttrValue {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
-            AttrValue::LitStr(t) => t.to_tokens(tokens),
-            AttrValue::LitBool(t) => t.to_tokens(tokens),
-            AttrValue::LitInt(t) => t.to_tokens(tokens),
+            AttrValue::Str(t) => t.to_tokens(tokens),
+            AttrValue::Bool(t) => t.to_tokens(tokens),
+            AttrValue::Int(t) => t.to_tokens(tokens),
         }
     }
 }
