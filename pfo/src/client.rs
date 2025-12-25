@@ -2,6 +2,7 @@ use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
 use pfo_core::output::ColumnEnumSorted;
 use pfo_core::sort::SortArguments;
+use reqwest::header::ACCEPT;
 use reqwest::{Client, Method, RequestBuilder, Response, Url};
 use serde::Serialize;
 use uuid::Uuid;
@@ -56,9 +57,13 @@ impl PfoClient {
 
     async fn send_internal(
         &self,
-        request: RequestBuilder,
+        mut request: RequestBuilder,
         should_have_content: bool,
     ) -> Result<Response> {
+        if should_have_content {
+            request = request.header(ACCEPT, "application/json");
+        }
+
         let response = request.send().await.context("Failed to send request")?;
 
         let status = response.status().as_u16();
