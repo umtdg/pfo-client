@@ -7,7 +7,7 @@ macro_rules! impl_table {
 
             const COLUMN_SPACING: usize = 4;
 
-            fn print_table(list: &Vec<Self>, opts: pfo_core::output::TableArgs<Self::ColumnEnum>) {
+            fn print_table(list: &[Self], opts: pfo_core::output::TableArgs<Self::ColumnEnum>) {
                 let columns = opts.columns.unwrap_or(
                     <Self::ColumnEnum as pfo_core::output::ColumnEnum>::default_columns(),
                 );

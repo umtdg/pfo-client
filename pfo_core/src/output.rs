@@ -1,5 +1,5 @@
-use clap::{Args, ValueEnum};
 use chrono::NaiveDate;
+use clap::{Args, ValueEnum};
 use uuid::Uuid;
 
 pub trait Table: Sized {
@@ -8,7 +8,7 @@ pub trait Table: Sized {
 
     const COLUMN_SPACING: usize;
 
-    fn print_table(list: &Vec<Self>, opts: TableArgs<Self::ColumnEnum>);
+    fn print_table(list: &[Self], opts: TableArgs<Self::ColumnEnum>);
 }
 
 pub trait ColumnEnum: Sized + ValueEnum {
@@ -89,12 +89,21 @@ impl<T: ToRowValue> ToRowValue for Option<T> {
 
 #[derive(Args)]
 pub struct TableArgs<T: Clone + ColumnEnum + Send + Sync + 'static> {
-    #[arg(short = 'o', long = "output", value_delimiter = ',', help = "Limit output to only these columns")]
+    #[arg(
+        short = 'o',
+        long = "output",
+        value_delimiter = ',',
+        help = "Limit output to only these columns"
+    )]
     pub columns: Option<Vec<T>>,
 
     #[arg(long, help = "Omit headers when printing")]
     pub no_headers: bool,
 
-    #[arg(short, long, help = "Do not trim long strings. Prices, dates, numerical values etc. are not trimmed")]
+    #[arg(
+        short,
+        long,
+        help = "Do not trim long strings. Prices, dates, numerical values etc. are not trimmed"
+    )]
     pub wide: bool,
 }
