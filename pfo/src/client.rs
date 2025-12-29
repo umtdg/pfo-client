@@ -9,7 +9,9 @@ use uuid::Uuid;
 
 use crate::cli::FundFilterArgs;
 use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
-use crate::portfolio::{FundToBuy, FundToBuyColumn, Portfolio, PortfolioUpdate};
+use crate::portfolio::{
+    Portfolio, PortfolioFundBuyPrediction, PortfolioFundBuyPredictionColumn, PortfolioUpdate,
+};
 use crate::problem_detail::ProblemDetail;
 
 pub struct PfoClient {
@@ -112,20 +114,20 @@ impl PfoClient {
         .context("Error when decoding/parsing Portfolio from response")
     }
 
-    pub async fn get_portfolio_prices(
+    pub async fn get_portfolio_fund_buy_predictions(
         &self,
         id: Uuid,
         budget: f32,
         fund_filter: FundFilterArgs,
-        sort: Option<SortArguments<FundToBuyColumn>>,
-    ) -> Result<Vec<FundToBuy>> {
+        sort: Option<SortArguments<PortfolioFundBuyPredictionColumn>>,
+    ) -> Result<Vec<PortfolioFundBuyPrediction>> {
         let mut query: Query = vec![("budget", budget.to_string())].into();
         query.push_fund_filter(fund_filter);
         query.push_sort(sort);
 
         self.send(
             Method::GET,
-            format!("/p/{}/prices", id),
+            format!("/p/{}/predictions", id),
             Some(query),
             none_serialize(),
             true,
