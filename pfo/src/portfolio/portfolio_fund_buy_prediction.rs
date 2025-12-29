@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// FundToBuy
 #[derive(Debug, Deserialize, Serialize, OutputTable)]
-pub struct FundToBuy {
+pub struct PortfolioFundBuyPrediction {
     #[column(max_width = 3, is_default)]
     pub code: String,
 
@@ -22,4 +22,8 @@ pub struct FundToBuy {
     pub weight: f32,
 }
 
-impl_table!(FundToBuy, FundToBuyColumn, FundToBuyRow);
+impl_table!(
+    PortfolioFundBuyPrediction,
+    PortfolioFundBuyPredictionColumn,
+    PortfolioFundBuyPredictionRow
+);

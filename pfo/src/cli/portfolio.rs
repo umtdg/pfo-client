@@ -10,7 +10,8 @@ use crate::cli::fund::FundFilterArgs;
 use crate::client::PfoClient;
 use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{
-    FundToBuy, FundToBuyColumn, Portfolio, PortfolioColumn, PortfolioFundAdd, PortfolioUpdate,
+    Portfolio, PortfolioColumn, PortfolioFundAdd, PortfolioFundBuyPrediction,
+    PortfolioFundBuyPredictionColumn, PortfolioUpdate,
 };
 
 #[derive(Subcommand)]
@@ -39,11 +40,12 @@ pub enum PortfolioCommand {
     },
 
     #[command(
-        name = "prices",
+        name = "predictions",
         visible_alias = "p",
+        visible_alias = "pred",
         about = "Get how much to spend for each fund in a portfolio"
     )]
-    Prices {
+    Predictions {
         #[arg(value_name = "PORTFOLIO_ID", help = "Portoflio UUID")]
         id: Uuid,
 
@@ -54,15 +56,15 @@ pub enum PortfolioCommand {
         fund_filter: FundFilterArgs,
 
         #[command(flatten)]
-        output: TableArgs<FundToBuyColumn>,
+        output: TableArgs<PortfolioFundBuyPredictionColumn>,
 
         #[arg(
             short,
             long,
-            value_parser = SortArguments::<FundToBuyColumn>::value_parser,
-            help = SortArguments::<FundToBuyColumn>::get_help()
+            value_parser = SortArguments::<PortfolioFundBuyPredictionColumn>::value_parser,
+            help = SortArguments::<PortfolioFundBuyPredictionColumn>::get_help()
         )]
-        sort: Option<SortArguments<FundToBuyColumn>>,
+        sort: Option<SortArguments<PortfolioFundBuyPredictionColumn>>,
     },
 
     #[command(
@@ -166,7 +168,7 @@ impl PortfolioCommand {
             PortfolioCommand::Get { id, output } => {
                 Portfolio::print_table(&[client.get_portfolio(id).await?], output);
             }
-            PortfolioCommand::Prices {
+            PortfolioCommand::Predictions {
                 id,
                 budget,
                 fund_filter,
@@ -174,9 +176,9 @@ impl PortfolioCommand {
                 sort,
                 ..
             } => {
-                FundToBuy::print_table(
+                PortfolioFundBuyPrediction::print_table(
                     &client
-                        .get_portfolio_prices(id, budget, fund_filter, sort)
+                        .get_portfolio_fund_buy_predictions(id, budget, fund_filter, sort)
                         .await?,
                     output,
                 );
