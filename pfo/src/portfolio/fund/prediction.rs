@@ -3,9 +3,8 @@ use pfo_core::impl_table;
 use pfo_derive::OutputTable;
 use serde::{Deserialize, Serialize};
 
-/// FundToBuy
 #[derive(Debug, Deserialize, Serialize, OutputTable)]
-pub struct PortfolioFundBuyPrediction {
+pub struct PortfolioFundPrediction {
     #[column(max_width = 3, is_default)]
     pub code: String,
 
@@ -23,7 +22,7 @@ pub struct PortfolioFundBuyPrediction {
 }
 
 impl_table!(
-    PortfolioFundBuyPrediction,
-    PortfolioFundBuyPredictionColumn,
-    PortfolioFundBuyPredictionRow
+    PortfolioFundPrediction,
+    PortfolioFundPredictionColumn,
+    PortfolioFundPredictionRow
 );

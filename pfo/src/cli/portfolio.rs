@@ -10,8 +10,9 @@ use crate::cli::fund::FundFilterArgs;
 use crate::client::PfoClient;
 use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{
-    Portfolio, PortfolioColumn, PortfolioFundAdd, PortfolioFundBuyPrediction,
-    PortfolioFundBuyPredictionColumn, PortfolioUpdate,
+    Portfolio, PortfolioColumn, PortfolioFund, PortfolioFundColumn, PortfolioFundPrediction,
+    PortfolioFundPredictionColumn, PortfolioFundPrice, PortfolioFundPriceColumn,
+    PortfolioFundUpdate, PortfolioUpdate,
 };
 
 #[derive(Subcommand)]
@@ -40,8 +41,50 @@ pub enum PortfolioCommand {
     },
 
     #[command(
-        name = "predictions",
+        name = "funds",
+        visible_alias = "f",
+        about = "Get a list of funds in portfolio"
+    )]
+    Funds {
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
+        id: Uuid,
+
+        #[command(flatten)]
+        output: TableArgs<PortfolioFundColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = SortArguments::<PortfolioFundColumn>::value_parser,
+            help = SortArguments::<PortfolioFundColumn>::get_help()
+        )]
+        sort: Option<SortArguments<PortfolioFundColumn>>,
+    },
+
+    #[command(
+        name = "prices",
         visible_alias = "p",
+        about = "Get a list of fund prices in portfolio"
+    )]
+    Prices {
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
+        id: Uuid,
+
+        #[command(flatten)]
+        output: TableArgs<PortfolioFundPriceColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = SortArguments::<PortfolioFundPriceColumn>::value_parser,
+            help = SortArguments::<PortfolioFundPriceColumn>::get_help()
+        )]
+        sort: Option<SortArguments<PortfolioFundPriceColumn>>,
+    },
+
+    #[command(
+        name = "predictions",
+        visible_alias = "P",
         visible_alias = "pred",
         about = "Get how much to spend for each fund in a portfolio"
     )]
@@ -56,15 +99,15 @@ pub enum PortfolioCommand {
         fund_filter: FundFilterArgs,
 
         #[command(flatten)]
-        output: TableArgs<PortfolioFundBuyPredictionColumn>,
+        output: TableArgs<PortfolioFundPredictionColumn>,
 
         #[arg(
             short,
             long,
-            value_parser = SortArguments::<PortfolioFundBuyPredictionColumn>::value_parser,
-            help = SortArguments::<PortfolioFundBuyPredictionColumn>::get_help()
+            value_parser = SortArguments::<PortfolioFundPredictionColumn>::value_parser,
+            help = SortArguments::<PortfolioFundPredictionColumn>::get_help()
         )]
-        sort: Option<SortArguments<PortfolioFundBuyPredictionColumn>>,
+        sort: Option<SortArguments<PortfolioFundPredictionColumn>>,
     },
 
     #[command(
@@ -127,17 +170,22 @@ pub enum PortfolioCommand {
         #[arg(
             short,
             long,
-            default_value_t = 50,
             help = "Weight of the added fund, higher means more preferred"
         )]
-        weight: u32,
+        weight: Option<u32>,
+
+        #[arg(long, help = "Minimum number of amounts to buy the added fund")]
+        min_amount: Option<u32>,
+
+        #[arg(short, long, help = "Owned amount")]
+        owned_amount: Option<u32>,
 
         #[arg(
+            short,
             long,
-            default_value_t = 1,
-            help = "Minimum number of amounts to buy the added fund"
+            help = "Total money spent for buying owned_amount many units"
         )]
-        min_amount: u32,
+        total_money_spent: Option<f64>,
     },
 
     #[command(
@@ -168,6 +216,15 @@ impl PortfolioCommand {
             PortfolioCommand::Get { id, output } => {
                 Portfolio::print_table(&[client.get_portfolio(id).await?], output);
             }
+            PortfolioCommand::Funds { id, output, sort } => {
+                PortfolioFund::print_table(&client.get_portfolio_funds(id, sort).await?, output);
+            }
+            PortfolioCommand::Prices { id, output, sort } => {
+                PortfolioFundPrice::print_table(
+                    &client.get_portfolio_fund_prices(id, sort).await?,
+                    output,
+                );
+            }
             PortfolioCommand::Predictions {
                 id,
                 budget,
@@ -176,9 +233,9 @@ impl PortfolioCommand {
                 sort,
                 ..
             } => {
-                PortfolioFundBuyPrediction::print_table(
+                PortfolioFundPrediction::print_table(
                     &client
-                        .get_portfolio_fund_buy_predictions(id, budget, fund_filter, sort)
+                        .get_portfolio_fund_predictions(id, budget, fund_filter, sort)
                         .await?,
                     output,
                 );
@@ -188,14 +245,18 @@ impl PortfolioCommand {
                 code,
                 weight,
                 min_amount,
+                owned_amount,
+                total_money_spent,
             } => {
                 let update = PortfolioUpdate {
                     add_codes: {
                         let mut set = HashSet::new();
-                        set.insert(PortfolioFundAdd {
+                        set.insert(PortfolioFundUpdate {
                             fund_code: code,
                             weight,
                             min_amount,
+                            owned_amount,
+                            total_money_spent,
                         });
                         set
                     },

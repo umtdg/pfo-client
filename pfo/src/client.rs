@@ -10,7 +10,8 @@ use uuid::Uuid;
 use crate::cli::FundFilterArgs;
 use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{
-    Portfolio, PortfolioFundBuyPrediction, PortfolioFundBuyPredictionColumn, PortfolioUpdate,
+    Portfolio, PortfolioFund, PortfolioFundColumn, PortfolioFundPrediction,
+    PortfolioFundPredictionColumn, PortfolioFundPrice, PortfolioFundPriceColumn, PortfolioUpdate,
 };
 use crate::problem_detail::ProblemDetail;
 
@@ -114,20 +115,17 @@ impl PfoClient {
         .context("Error when decoding/parsing Portfolio from response")
     }
 
-    pub async fn get_portfolio_fund_buy_predictions(
+    pub async fn get_portfolio_funds(
         &self,
         id: Uuid,
-        budget: f32,
-        fund_filter: FundFilterArgs,
-        sort: Option<SortArguments<PortfolioFundBuyPredictionColumn>>,
-    ) -> Result<Vec<PortfolioFundBuyPrediction>> {
-        let mut query: Query = vec![("budget", budget.to_string())].into();
-        query.push_fund_filter(fund_filter);
+        sort: Option<SortArguments<PortfolioFundColumn>>,
+    ) -> Result<Vec<PortfolioFund>> {
+        let mut query: Query = Vec::with_capacity(2).into();
         query.push_sort(sort);
 
         self.send(
             Method::GET,
-            format!("/p/{}/predictions", id),
+            format!("/p/{}/f", id),
             Some(query),
             none_serialize(),
             true,
@@ -135,7 +133,52 @@ impl PfoClient {
         .await?
         .json()
         .await
-        .context("Error when decoding/parsing list of fund buy informations from response")
+        .context("Error when decoding/parsing list of portfolio funds from response")
+    }
+
+    pub async fn get_portfolio_fund_prices(
+        &self,
+        id: Uuid,
+        sort: Option<SortArguments<PortfolioFundPriceColumn>>,
+    ) -> Result<Vec<PortfolioFundPrice>> {
+        let mut query: Query = Vec::with_capacity(2).into();
+        query.push_sort(sort);
+
+        self.send(
+            Method::GET,
+            format!("/p/{}/f/prices", id),
+            Some(query),
+            none_serialize(),
+            true,
+        )
+        .await?
+        .json()
+        .await
+        .context("Error when decoding/parsing list of portfolio fund prices from response")
+    }
+
+    pub async fn get_portfolio_fund_predictions(
+        &self,
+        id: Uuid,
+        budget: f32,
+        fund_filter: FundFilterArgs,
+        sort: Option<SortArguments<PortfolioFundPredictionColumn>>,
+    ) -> Result<Vec<PortfolioFundPrediction>> {
+        let mut query: Query = vec![("budget", budget.to_string())].into();
+        query.push_fund_filter(fund_filter);
+        query.push_sort(sort);
+
+        self.send(
+            Method::GET,
+            format!("/p/{}/f/predictions", id),
+            Some(query),
+            none_serialize(),
+            true,
+        )
+        .await?
+        .json()
+        .await
+        .context("Error when decoding/parsing list of portfolio fund predictions from response")
     }
 
     pub async fn get_portfolio_fund_infos(
@@ -148,7 +191,7 @@ impl PfoClient {
 
         self.send(
             Method::GET,
-            format!("/p/{}/info", id),
+            format!("/p/{}/f/infos", id),
             Some(query),
             none_serialize(),
             true,
@@ -171,7 +214,7 @@ impl PfoClient {
 
         self.send(
             Method::GET,
-            format!("/p/{}/stats", id),
+            format!("/p/{}/f/stats", id),
             Some(query),
             none_serialize(),
             true,

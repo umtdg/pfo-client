@@ -1,5 +1,5 @@
-mod fund_info;
-mod fund_stats;
+mod info;
+mod stats;
 
-pub use fund_info::{FundInfo, FundInfoColumn};
-pub use fund_stats::{FundStats, FundStatsColumn};
+pub use info::{FundInfo, FundInfoColumn};
+pub use stats::{FundStats, FundStatsColumn};
