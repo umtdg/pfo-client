@@ -19,11 +19,11 @@ pub struct FundInfo {
     #[column(max_width = 10, is_default)]
     pub date: NaiveDate,
 
-    #[column(max_width = 15, is_default, left_align = false)]
-    pub price: f32,
+    #[column(max_width = 30, is_default, left_align = false)]
+    pub price: f64,
 
     #[column(max_width = 30, left_align = false)]
-    pub total_value: f32,
+    pub total_value: f64,
 }
 
 impl_table!(FundInfo, FundInfoColumn, FundInfoRow);

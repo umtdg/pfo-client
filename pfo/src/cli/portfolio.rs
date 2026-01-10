@@ -1,18 +1,18 @@
 use std::collections::HashSet;
 
 use anyhow::{Context, Result};
+use chrono::NaiveDate;
 use clap::Subcommand;
 use pfo_core::output::{Table, TableArgs};
+use pfo_core::parse_naive_date;
 use pfo_core::sort::SortArguments;
 use uuid::Uuid;
 
-use crate::cli::fund::FundFilterArgs;
 use crate::client::PfoClient;
-use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
+use crate::fund::{FundPriceStats, FundPriceStatsColumn, FundStats, FundStatsColumn};
 use crate::portfolio::{
-    Portfolio, PortfolioColumn, PortfolioFund, PortfolioFundColumn, PortfolioFundPrediction,
-    PortfolioFundPredictionColumn, PortfolioFundPrice, PortfolioFundPriceColumn,
-    PortfolioFundUpdate, PortfolioUpdate,
+    Portfolio, PortfolioColumn, PortfolioFundPrediction, PortfolioFundPredictionColumn,
+    PortfolioFundPrice, PortfolioFundPriceColumn, PortfolioFundUpdate, PortfolioUpdate,
 };
 
 #[derive(Subcommand)]
@@ -41,27 +41,6 @@ pub enum PortfolioCommand {
     },
 
     #[command(
-        name = "funds",
-        visible_alias = "f",
-        about = "Get a list of funds in portfolio"
-    )]
-    Funds {
-        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
-        id: Uuid,
-
-        #[command(flatten)]
-        output: TableArgs<PortfolioFundColumn>,
-
-        #[arg(
-            short,
-            long,
-            value_parser = SortArguments::<PortfolioFundColumn>::value_parser,
-            help = SortArguments::<PortfolioFundColumn>::get_help()
-        )]
-        sort: Option<SortArguments<PortfolioFundColumn>>,
-    },
-
-    #[command(
         name = "prices",
         visible_alias = "p",
         about = "Get a list of fund prices in portfolio"
@@ -72,6 +51,14 @@ pub enum PortfolioCommand {
 
         #[command(flatten)]
         output: TableArgs<PortfolioFundPriceColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = parse_naive_date,
+            help = "Get fund prices only for given date. Latest date is used by server if omitted"
+        )]
+        date: Option<NaiveDate>,
 
         #[arg(
             short,
@@ -96,39 +83,7 @@ pub enum PortfolioCommand {
         budget: f32,
 
         #[command(flatten)]
-        fund_filter: FundFilterArgs,
-
-        #[command(flatten)]
         output: TableArgs<PortfolioFundPredictionColumn>,
-
-        #[arg(
-            short,
-            long,
-            value_parser = SortArguments::<PortfolioFundPredictionColumn>::value_parser,
-            help = SortArguments::<PortfolioFundPredictionColumn>::get_help()
-        )]
-        sort: Option<SortArguments<PortfolioFundPredictionColumn>>,
-    },
-
-    #[command(
-        name = "info",
-        visible_alias = "i",
-        about = "Get fund information for funds in given portfolio"
-    )]
-    Info {
-        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
-        id: Uuid,
-
-        #[command(flatten)]
-        output: TableArgs<FundInfoColumn>,
-
-        #[arg(
-            short,
-            long,
-            value_parser = SortArguments::<FundInfoColumn>::value_parser,
-            help = SortArguments::<FundInfoColumn>::get_help()
-        )]
-        sort: Option<SortArguments<FundInfoColumn>>,
     },
 
     #[command(
@@ -140,13 +95,6 @@ pub enum PortfolioCommand {
         #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
         id: Uuid,
 
-        #[arg(
-            short,
-            long,
-            help = "Forces server to update its internal fund stats by passing `force=true`"
-        )]
-        force: bool,
-
         #[command(flatten)]
         output: TableArgs<FundStatsColumn>,
 
@@ -157,6 +105,27 @@ pub enum PortfolioCommand {
             help = SortArguments::<FundStatsColumn>::get_help()
         )]
         sort: Option<SortArguments<FundStatsColumn>>,
+    },
+
+    #[command(
+        name = "price-stats",
+        visible_alias = "ps",
+        about = "Get fund price stats for funds in given portfolio"
+    )]
+    PriceStats {
+        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
+        id: Uuid,
+
+        #[command(flatten)]
+        output: TableArgs<FundPriceStatsColumn>,
+
+        #[arg(
+            short,
+            long,
+            value_parser = SortArguments::<FundPriceStatsColumn>::value_parser,
+            help = SortArguments::<FundPriceStatsColumn>::get_help()
+        )]
+        sort: Option<SortArguments<FundPriceStatsColumn>>,
     },
 
     #[command(name = "add", visible_alias = "a", about = "Add funds to a portfolio")]
@@ -216,27 +185,20 @@ impl PortfolioCommand {
             PortfolioCommand::Get { id, output } => {
                 Portfolio::print_table(&[client.get_portfolio(id).await?], output);
             }
-            PortfolioCommand::Funds { id, output, sort } => {
-                PortfolioFund::print_table(&client.get_portfolio_funds(id, sort).await?, output);
-            }
-            PortfolioCommand::Prices { id, output, sort } => {
+            PortfolioCommand::Prices {
+                id,
+                output,
+                date,
+                sort,
+            } => {
                 PortfolioFundPrice::print_table(
-                    &client.get_portfolio_fund_prices(id, sort).await?,
+                    &client.get_portfolio_fund_prices(id, date, sort).await?,
                     output,
                 );
             }
-            PortfolioCommand::Predictions {
-                id,
-                budget,
-                fund_filter,
-                output,
-                sort,
-                ..
-            } => {
+            PortfolioCommand::Predictions { id, budget, output } => {
                 PortfolioFundPrediction::print_table(
-                    &client
-                        .get_portfolio_fund_predictions(id, budget, fund_filter, sort)
-                        .await?,
+                    &client.get_portfolio_fund_predictions(id, budget).await?,
                     output,
                 );
             }
@@ -286,17 +248,12 @@ impl PortfolioCommand {
 
                 println!("Successfully removed funds");
             }
-            PortfolioCommand::Info { id, output, sort } => {
-                FundInfo::print_table(&client.get_portfolio_fund_infos(id, sort).await?, output);
+            PortfolioCommand::Stats { id, output, sort } => {
+                FundStats::print_table(&client.get_protfolio_fund_stats(id, sort).await?, output);
             }
-            PortfolioCommand::Stats {
-                id,
-                force,
-                output,
-                sort,
-            } => {
-                FundStats::print_table(
-                    &client.get_protfolio_fund_stats(id, sort, force).await?,
+            PortfolioCommand::PriceStats { id, output, sort } => {
+                FundPriceStats::print_table(
+                    &client.get_portfolio_fund_price_stats(id, sort).await?,
                     output,
                 );
             }

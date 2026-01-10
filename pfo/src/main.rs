@@ -1,8 +1,10 @@
 mod cli;
 mod client;
 mod fund;
+mod none_serialize;
 mod portfolio;
 mod problem_detail;
+mod query;
 
 use anyhow::Result;
 use clap::Parser;

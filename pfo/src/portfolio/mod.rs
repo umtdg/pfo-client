@@ -2,8 +2,8 @@ mod fund;
 mod update;
 
 pub use fund::{
-    PortfolioFund, PortfolioFundColumn, PortfolioFundPrediction, PortfolioFundPredictionColumn,
-    PortfolioFundPrice, PortfolioFundPriceColumn, PortfolioFundUpdate,
+    PortfolioFundPrediction, PortfolioFundPredictionColumn, PortfolioFundPrice,
+    PortfolioFundPriceColumn, PortfolioFundUpdate,
 };
 pub use update::PortfolioUpdate;
 

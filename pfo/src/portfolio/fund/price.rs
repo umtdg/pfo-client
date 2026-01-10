@@ -13,11 +13,14 @@ pub struct PortfolioFundPrice {
     #[column(max_width = 3, is_default)]
     pub code: String,
 
+    #[column(max_width = 25)]
+    pub title: String,
+
     #[column(max_width = 10, is_default)]
     pub date: NaiveDate,
 
-    #[column(max_width = 25)]
-    pub title: String,
+    #[column(max_width = 30, is_default)]
+    pub price: f64,
 
     #[column(max_width = 15)]
     pub normalized_weight: f32,
@@ -28,8 +31,8 @@ pub struct PortfolioFundPrice {
     #[column(header = "Owned", max_width = 10, is_default)]
     pub owned_amount: u32,
 
-    #[column(header = "Spent", max_width = 30, is_default)]
-    pub total_money_spent: f64,
+    #[column(max_width = 30, is_default)]
+    pub money_spent: f64,
 }
 
 impl_table!(
