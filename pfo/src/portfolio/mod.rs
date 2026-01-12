@@ -1,11 +1,25 @@
-mod portfolio_dto;
-mod portfolio_fund_add;
-mod portfolio_fund_buy_prediction;
-mod portfolio_update;
+mod fund;
+mod update;
 
-pub use portfolio_dto::{Portfolio, PortfolioColumn};
-pub use portfolio_fund_add::PortfolioFundAdd;
-pub use portfolio_fund_buy_prediction::{
-    PortfolioFundBuyPrediction, PortfolioFundBuyPredictionColumn,
+pub use fund::{
+    PortfolioFundPrediction, PortfolioFundPredictionColumn, PortfolioFundPrice,
+    PortfolioFundPriceColumn, PortfolioFundUpdate,
 };
-pub use portfolio_update::PortfolioUpdate;
+pub use update::PortfolioUpdate;
+
+use clap::ValueEnum;
+use pfo_core::impl_table;
+use pfo_derive::OutputTable;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+#[derive(Debug, Deserialize, Serialize, OutputTable)]
+pub struct Portfolio {
+    #[column(max_width = 36, is_default)]
+    pub id: Uuid,
+
+    #[column(max_width = 50, is_default)]
+    pub name: String,
+}
+
+impl_table!(Portfolio, PortfolioColumn, PortfolioRow);

@@ -1,6 +1,5 @@
 use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
-use pfo_core::output::ColumnEnumSorted;
 use pfo_core::sort::SortArguments;
 use reqwest::header::ACCEPT;
 use reqwest::{Client, Method, RequestBuilder, Response, Url};
@@ -8,11 +7,14 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::cli::FundFilterArgs;
-use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
+use crate::fund::{FundInfo, FundInfoColumn, FundPriceStats, FundPriceStatsColumn};
+use crate::none_serialize::none_serialize;
 use crate::portfolio::{
-    Portfolio, PortfolioFundBuyPrediction, PortfolioFundBuyPredictionColumn, PortfolioUpdate,
+    Portfolio, PortfolioFundPrediction, PortfolioFundPrice, PortfolioFundPriceColumn,
+    PortfolioUpdate,
 };
 use crate::problem_detail::ProblemDetail;
+use crate::query::Query;
 
 pub struct PfoClient {
     client: Client,
@@ -47,7 +49,7 @@ impl PfoClient {
         let mut request = self.client.request(method, url);
 
         if let Some(query) = query {
-            request = request.query(&query.pairs);
+            request = request.query(query.pairs());
         }
 
         if let Some(body) = body {
@@ -114,20 +116,19 @@ impl PfoClient {
         .context("Error when decoding/parsing Portfolio from response")
     }
 
-    pub async fn get_portfolio_fund_buy_predictions(
+    pub async fn get_portfolio_fund_prices(
         &self,
         id: Uuid,
-        budget: f32,
-        fund_filter: FundFilterArgs,
-        sort: Option<SortArguments<PortfolioFundBuyPredictionColumn>>,
-    ) -> Result<Vec<PortfolioFundBuyPrediction>> {
-        let mut query: Query = vec![("budget", budget.to_string())].into();
-        query.push_fund_filter(fund_filter);
+        date: Option<NaiveDate>,
+        sort: Option<SortArguments<PortfolioFundPriceColumn>>,
+    ) -> Result<Vec<PortfolioFundPrice>> {
+        let mut query: Query = Vec::with_capacity(3).into();
+        query.push_date("date", date);
         query.push_sort(sort);
 
         self.send(
             Method::GET,
-            format!("/p/{}/predictions", id),
+            format!("/p/{}/f", id),
             Some(query),
             none_serialize(),
             true,
@@ -135,20 +136,20 @@ impl PfoClient {
         .await?
         .json()
         .await
-        .context("Error when decoding/parsing list of fund buy informations from response")
+        .context("Error when decoding/parsing list of portfolio fund prices from response")
     }
 
-    pub async fn get_portfolio_fund_infos(
+    pub async fn get_portfolio_fund_price_stats(
         &self,
         id: Uuid,
-        sort: Option<SortArguments<FundInfoColumn>>,
-    ) -> Result<Vec<FundInfo>> {
+        sort: Option<SortArguments<FundPriceStatsColumn>>,
+    ) -> Result<Vec<FundPriceStats>> {
         let mut query: Query = Vec::with_capacity(2).into();
         query.push_sort(sort);
 
         self.send(
             Method::GET,
-            format!("/p/{}/info", id),
+            format!("/p/{}/f/stats", id),
             Some(query),
             none_serialize(),
             true,
@@ -156,22 +157,19 @@ impl PfoClient {
         .await?
         .json()
         .await
-        .context("Error when decoding/parsing list of fund informations from response")
+        .context("Error when decoding/parsing list of fund price stats from response")
     }
 
-    pub async fn get_protfolio_fund_stats(
+    pub async fn get_portfolio_fund_predictions(
         &self,
         id: Uuid,
-        sort: Option<SortArguments<FundStatsColumn>>,
-        force: bool,
-    ) -> Result<Vec<FundStats>> {
-        let mut query: Query = Vec::with_capacity(3).into();
-        query.push_sort(sort);
-        query.push_bool("force", force);
+        budget: f32,
+    ) -> Result<Vec<PortfolioFundPrediction>> {
+        let query: Query = vec![("budget", budget.to_string())].into();
 
         self.send(
             Method::GET,
-            format!("/p/{}/stats", id),
+            format!("/p/{}/f/predictions", id),
             Some(query),
             none_serialize(),
             true,
@@ -179,7 +177,7 @@ impl PfoClient {
         .await?
         .json()
         .await
-        .context("Error when decoding/parsing list of fund stats from response")
+        .context("Error when decoding/parsing list of portfolio fund predictions from response")
     }
 
     pub async fn update_portfolio(&self, id: Uuid, update: PortfolioUpdate) -> Result<()> {
@@ -205,79 +203,25 @@ impl PfoClient {
             .context("Error when decoding/parsing list of fund informations from response")
     }
 
-    pub async fn get_fund_stats(
+    pub async fn get_fund_price_stats(
         &self,
         codes: Vec<String>,
-        force: bool,
-        sort: Option<SortArguments<FundStatsColumn>>,
-    ) -> Result<Vec<FundStats>> {
-        let mut query: Query = Vec::with_capacity(4).into();
+        sort: Option<SortArguments<FundPriceStatsColumn>>,
+    ) -> Result<Vec<FundPriceStats>> {
+        let mut query: Query = Vec::with_capacity(3).into();
         query.push_sort(sort);
-        query.push_bool("force", force);
         query.push_vec("codes", codes);
 
-        self.send(Method::GET, "/f", Some(query), none_serialize(), true)
-            .await?
-            .json()
-            .await
-            .context("Error when decoding/parsing list of fund stats from response")
+        self.send(
+            Method::GET,
+            "/f/stats",
+            Some(query),
+            none_serialize(),
+            true,
+        )
+        .await?
+        .json()
+        .await
+        .context("Error when decoding/parsing list of fund price stats from respone")
     }
-}
-
-struct Query<'a> {
-    pub(crate) pairs: Vec<(&'a str, String)>,
-}
-
-impl<'a> From<Vec<(&'a str, String)>> for Query<'a> {
-    fn from(value: Vec<(&'a str, String)>) -> Self {
-        Self { pairs: value }
-    }
-}
-
-impl<'a> Query<'a> {
-    pub fn push_vec(&mut self, key: &'a str, values: Vec<String>) {
-        if !values.is_empty() {
-            self.pairs.push((key, values.join(",")));
-        }
-    }
-
-    pub fn push_date(&mut self, key: &'a str, date: Option<NaiveDate>) {
-        if let Some(date) = date {
-            self.pairs
-                .push((key, format!("{}", date.format("%m.%d.%Y"))));
-        }
-    }
-
-    pub fn push_sort<T: ColumnEnumSorted>(&mut self, sort: Option<SortArguments<T>>) {
-        if let Some(sort) = sort {
-            self.pairs
-                .push(("sortBy", sort.by.to_server_name().to_string()));
-            self.pairs.push(("sortDirection", sort.dir.to_string()));
-        }
-    }
-
-    pub fn push_bool(&mut self, key: &'a str, value: bool) {
-        if value {
-            self.pairs.push((key, "true".into()));
-        }
-    }
-
-    pub fn push_fund_filter(&mut self, fund_filter: FundFilterArgs) {
-        self.push_date("date", fund_filter.date);
-        self.push_date("fetchFrom", fund_filter.from);
-        self.push_vec("codes", fund_filter.codes);
-    }
-}
-
-#[derive(Serialize)]
-struct NoneSerialize;
-
-impl NoneSerialize {
-    pub fn new() -> Option<Self> {
-        None
-    }
-}
-
-fn none_serialize() -> Option<NoneSerialize> {
-    NoneSerialize::new()
 }

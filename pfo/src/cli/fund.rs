@@ -4,7 +4,7 @@ use clap::{Args, Subcommand};
 use pfo_core::sort::SortArguments;
 use serde::Serialize;
 
-use crate::fund::{FundInfo, FundInfoColumn, FundStats, FundStatsColumn};
+use crate::fund::{FundInfo, FundInfoColumn, FundPriceStats, FundPriceStatsColumn};
 use pfo_core::output::{Table, TableArgs};
 use pfo_core::parse_naive_date;
 
@@ -19,15 +19,6 @@ pub struct FundFilterArgs {
         help = "Filter output to given date, otherwise no date is sent in query and server decides",
     )]
     pub date: Option<NaiveDate>,
-
-    #[serde(rename = "fetchFrom")]
-    #[arg(
-        short,
-        long,
-        value_parser = parse_naive_date,
-        help = "Date from which server should update its information. Fetch range is <fetchFrom> - <date>",
-    )]
-    pub from: Option<NaiveDate>,
 
     #[arg(
         value_name = "FUND_CODES",
@@ -56,32 +47,29 @@ pub enum FundCommand {
         sort: Option<SortArguments<FundInfoColumn>>,
     },
 
-    #[command(name = "stats", visible_alias = "s", about = "Get fund(s) statistics")]
-    Stats {
+    #[command(
+        name = "price-stats",
+        visible_alias = "ps",
+        about = "Get fund price stats for funds"
+    )]
+    PriceStats {
         #[arg(
             value_name = "FUND_CODES",
             value_delimiter = ',',
-            help = "List of fund codes to get fund statistics"
+            help = "List of fund codes to get fund price statistics"
         )]
         codes: Vec<String>,
 
-        #[arg(
-            short,
-            long,
-            help = "Forces server to update its internal fund stats by passing `force=true` to GET query"
-        )]
-        force: bool,
-
         #[command(flatten)]
-        output: TableArgs<FundStatsColumn>,
+        output: TableArgs<FundPriceStatsColumn>,
 
         #[arg(
             short,
             long,
-            value_parser = SortArguments::<FundStatsColumn>::value_parser,
-            help = SortArguments::<FundStatsColumn>::get_help()
+            value_parser = SortArguments::<FundPriceStatsColumn>::value_parser,
+            help = SortArguments::<FundPriceStatsColumn>::get_help()
         )]
-        sort: Option<SortArguments<FundStatsColumn>>,
+        sort: Option<SortArguments<FundPriceStatsColumn>>,
     },
 }
 
@@ -95,13 +83,15 @@ impl FundCommand {
             } => {
                 FundInfo::print_table(&client.get_funds(fund_filter, sort).await?, output);
             }
-            FundCommand::Stats {
+            FundCommand::PriceStats {
                 codes,
-                force,
                 output,
                 sort,
             } => {
-                FundStats::print_table(&client.get_fund_stats(codes, force, sort).await?, output);
+                FundPriceStats::print_table(
+                    &client.get_fund_price_stats(codes, sort).await?,
+                    output,
+                );
             }
         }
 

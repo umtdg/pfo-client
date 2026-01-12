@@ -66,6 +66,12 @@ impl ToRowValue for f32 {
     }
 }
 
+impl ToRowValue for f64 {
+    fn to_row_value(&self) -> String {
+        format!("{:.6}", self)
+    }
+}
+
 impl ToRowValue for NaiveDate {
     fn to_row_value(&self) -> String {
         self.format("%m.%d.%Y").to_string()
