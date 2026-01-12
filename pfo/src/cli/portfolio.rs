@@ -9,7 +9,7 @@ use pfo_core::sort::SortArguments;
 use uuid::Uuid;
 
 use crate::client::PfoClient;
-use crate::fund::{FundPriceStats, FundPriceStatsColumn, FundStats, FundStatsColumn};
+use crate::fund::{FundPriceStats, FundPriceStatsColumn};
 use crate::portfolio::{
     Portfolio, PortfolioColumn, PortfolioFundPrediction, PortfolioFundPredictionColumn,
     PortfolioFundPrice, PortfolioFundPriceColumn, PortfolioFundUpdate, PortfolioUpdate,
@@ -84,27 +84,6 @@ pub enum PortfolioCommand {
 
         #[command(flatten)]
         output: TableArgs<PortfolioFundPredictionColumn>,
-    },
-
-    #[command(
-        name = "stats",
-        visible_alias = "s",
-        about = "Get fund stats for funds in given portfolio"
-    )]
-    Stats {
-        #[arg(value_name = "PORTFOLIO_ID", help = "Portfolio UUID")]
-        id: Uuid,
-
-        #[command(flatten)]
-        output: TableArgs<FundStatsColumn>,
-
-        #[arg(
-            short,
-            long,
-            value_parser = SortArguments::<FundStatsColumn>::value_parser,
-            help = SortArguments::<FundStatsColumn>::get_help()
-        )]
-        sort: Option<SortArguments<FundStatsColumn>>,
     },
 
     #[command(
@@ -247,9 +226,6 @@ impl PortfolioCommand {
                     .context("Failed to remove funds from portfolio")?;
 
                 println!("Successfully removed funds");
-            }
-            PortfolioCommand::Stats { id, output, sort } => {
-                FundStats::print_table(&client.get_protfolio_fund_stats(id, sort).await?, output);
             }
             PortfolioCommand::PriceStats { id, output, sort } => {
                 FundPriceStats::print_table(

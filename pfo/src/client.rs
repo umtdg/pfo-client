@@ -7,9 +7,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::cli::FundFilterArgs;
-use crate::fund::{
-    FundInfo, FundInfoColumn, FundPriceStats, FundPriceStatsColumn, FundStats, FundStatsColumn,
-};
+use crate::fund::{FundInfo, FundInfoColumn, FundPriceStats, FundPriceStatsColumn};
 use crate::none_serialize::none_serialize;
 use crate::portfolio::{
     Portfolio, PortfolioFundPrediction, PortfolioFundPrice, PortfolioFundPriceColumn,
@@ -141,27 +139,6 @@ impl PfoClient {
         .context("Error when decoding/parsing list of portfolio fund prices from response")
     }
 
-    pub async fn get_protfolio_fund_stats(
-        &self,
-        id: Uuid,
-        sort: Option<SortArguments<FundStatsColumn>>,
-    ) -> Result<Vec<FundStats>> {
-        let mut query: Query = Vec::with_capacity(2).into();
-        query.push_sort(sort);
-
-        self.send(
-            Method::GET,
-            format!("/p/{}/f/stats", id),
-            Some(query),
-            none_serialize(),
-            true,
-        )
-        .await?
-        .json()
-        .await
-        .context("Error when decoding/parsing list of fund stats from response")
-    }
-
     pub async fn get_portfolio_fund_price_stats(
         &self,
         id: Uuid,
@@ -172,7 +149,7 @@ impl PfoClient {
 
         self.send(
             Method::GET,
-            format!("/p/{}/f/priceStats", id),
+            format!("/p/{}/f/stats", id),
             Some(query),
             none_serialize(),
             true,
@@ -226,22 +203,6 @@ impl PfoClient {
             .context("Error when decoding/parsing list of fund informations from response")
     }
 
-    pub async fn get_fund_stats(
-        &self,
-        codes: Vec<String>,
-        sort: Option<SortArguments<FundStatsColumn>>,
-    ) -> Result<Vec<FundStats>> {
-        let mut query: Query = Vec::with_capacity(4).into();
-        query.push_sort(sort);
-        query.push_vec("codes", codes);
-
-        self.send(Method::GET, "/f/stats", Some(query), none_serialize(), true)
-            .await?
-            .json()
-            .await
-            .context("Error when decoding/parsing list of fund stats from response")
-    }
-
     pub async fn get_fund_price_stats(
         &self,
         codes: Vec<String>,
@@ -253,7 +214,7 @@ impl PfoClient {
 
         self.send(
             Method::GET,
-            format!("/f/priceStats"),
+            "/f/stats",
             Some(query),
             none_serialize(),
             true,
