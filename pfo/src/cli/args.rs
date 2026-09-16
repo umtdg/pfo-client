@@ -12,11 +12,35 @@ pub struct Args {
     #[command(subcommand, help = "Subcommand")]
     pub command: Commands,
 
-    #[arg(short = 'H', long, global = true, help = "Server hostname/IP")]
+    /// Deprecated: use [`Args::base_url`]
+    #[arg(
+        short = 'H',
+        long,
+        global = true,
+        hide = true,
+        help = "Server hostname/IP (Deprecated, use --base-url)"
+    )]
     pub host: Option<String>,
 
-    #[arg(short, long, global = true, help = "Server port")]
+    /// Deprecated: use [`Args::base_url`]
+    #[arg(
+        short,
+        long,
+        global = true,
+        hide = true,
+        help = "Server port (Deprecated, use --base-url)"
+    )]
     pub port: Option<u16>,
+
+    #[arg(
+        short = 'u',
+        long,
+        global = true,
+        default_value = "https://pfo.umtdg.com",
+        conflicts_with_all = ["host", "port"],
+        help = "Base URL for the server where the requests will be made"
+    )]
+    pub base_url: String,
 }
 
 #[derive(Subcommand)]

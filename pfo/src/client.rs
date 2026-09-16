@@ -22,9 +22,13 @@ pub struct PfoClient {
 }
 
 impl PfoClient {
-    pub fn new(host: String, port: u16) -> Result<Self> {
+    pub fn new(host: &str, port: u16) -> Result<Self> {
         let url = format!("http://{}:{}", host, port);
-        let url = Url::parse(&url).context(format!("Invalid URL string: {}", url))?;
+        Self::from_url(&url)
+    }
+
+    pub fn from_url(url: &str) -> Result<Self> {
+        let url = Url::parse(url).context(format!("Invalid URL string: {}", url))?;
 
         log::debug!("Creating client with url {}", url);
 
@@ -212,16 +216,10 @@ impl PfoClient {
         query.push_sort(sort);
         query.push_vec("codes", codes);
 
-        self.send(
-            Method::GET,
-            "/f/stats",
-            Some(query),
-            none_serialize(),
-            true,
-        )
-        .await?
-        .json()
-        .await
-        .context("Error when decoding/parsing list of fund price stats from respone")
+        self.send(Method::GET, "/f/stats", Some(query), none_serialize(), true)
+            .await?
+            .json()
+            .await
+            .context("Error when decoding/parsing list of fund price stats from respone")
     }
 }
