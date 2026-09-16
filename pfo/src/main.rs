@@ -18,11 +18,13 @@ async fn main() -> Result<()> {
     env_logger::init_from_env(env);
 
     let args = Args::parse();
-
-    let client = client::PfoClient::new(
-        args.host.unwrap_or("localhost".into()),
-        args.port.unwrap_or(8080),
-    )?;
+    let client = match &args.host {
+        Some(host) => {
+            eprintln!("warning: -H/--host and -p/--port are deprecated; use -u/--base-url");
+            client::PfoClient::new(host, args.port.unwrap_or(8080))
+        }
+        None => client::PfoClient::from_url(&args.base_url),
+    }?;
 
     args.command.handle(client).await
 }
